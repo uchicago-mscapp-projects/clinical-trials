@@ -1,6 +1,7 @@
 import requests
 import json
 import pandas as pd
+import os.path
 import time
 
 API_URL = 'https://www.clinicaltrials.gov/api/v2/studies'
@@ -20,12 +21,9 @@ def make_trials_api_call(
         string value of the next page token
     """
 
-
     FIELDS = '|'.join(fields)
     pageToken = None
     payload = {'fields': FIELDS, 'query.intr': 'DRUG', 'pageToken':pageToken}
-
-
     
     r = requests.get(
         'https://www.clinicaltrials.gov/api/v2/studies', params=payload)
@@ -53,6 +51,11 @@ def write_data(data, filename, append=True):
     with open(filename, mode=mode) as f:
             f.write(json.dumps(data))
 
+def pull_trials_data():
+    """
+    Pulls trials data, and writes it to a JSON file.
+    """
+    pass 
 
 ##TODO: Handle waits, next page token
 ##TODO: Handle adding to json file, not overrwriting
