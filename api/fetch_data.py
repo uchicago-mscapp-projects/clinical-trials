@@ -27,5 +27,3 @@ def make_trials_api_call(
 
 ##TODO: Handle waits, next page token
 ##TODO: Handle adding to json file, not overrwriting
-nextPageToken = ''
-while nextPageToken:
