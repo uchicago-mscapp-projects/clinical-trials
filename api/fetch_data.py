@@ -16,7 +16,8 @@ API_URL = 'https://www.clinicaltrials.gov/api/v2/studies'
 def make_trials_api_call(
         fields=['BaselineMeasure', 'StatusModule', 'ConditionSearch', 
                 'InterventionType'], limit=10,
-                         pageToken = None) -> {json, str}:
+                         pageToken = None,
+                         ) -> {json, str}:
     """
     Makes an API call to NIH's clinical trials API.
 
@@ -30,7 +31,8 @@ def make_trials_api_call(
 
     fields = '|'.join(fields)
     payload = {'fields': fields, 'query.intr': 'DRUG', 'pageToken':pageToken,
-               'pageSize': limit}
+               'pageSize': limit, 'cond': 'Diabetes',   
+               }
     
     r = requests.get(
         'https://www.clinicaltrials.gov/api/v2/studies', params=payload)
@@ -84,7 +86,7 @@ def pull_trials_data(limit_per_call, limit_total):
 
     # Overwrite pre-existing data for this first call, append for later calls
     # in the loop
-    
+
     write_data(results, 'trials', append=False)
 
     # Counter set for testing purposes
@@ -103,4 +105,3 @@ def pull_trials_data(limit_per_call, limit_total):
         count_results += limit_per_call
         
         write_data(results, 'trials')
-
