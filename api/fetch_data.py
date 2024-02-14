@@ -28,13 +28,16 @@ def make_trials_api_call(
         string value of the next page token
     """
 
-    FIELDS = '|'.join(fields)
-    payload = {'fields': FIELDS, 'query.intr': 'DRUG', 'pageToken':pageToken}
+    fields = '|'.join(fields)
+    payload = {'fields': fields, 'query.intr': 'DRUG', 'pageToken':pageToken,
+               'pageSize': limit}
     
     r = requests.get(
         'https://www.clinicaltrials.gov/api/v2/studies', params=payload)
     
     r.raise_for_status()
+
+    print(r.url)
 
     return r
 
@@ -60,22 +63,44 @@ def write_data(data, source, append=True):
     with open(filename, mode=mode) as f:
             f.write(json.dumps(data))
 
-def pull_trials_data(limit):
+def pull_trials_data(limit_per_call, limit_total):
     """
     Pulls trials data, and writes it to a JSON file.
+    Args:
+        limit_per_call (int): The maximum number of calls to return per
+            call to the api. Cannot be more than 1000.
+        limit_total (int): The maximum total number of records to return.
     """
-    count_results = 0
-    print(f"Making initial API call for records between 0 and {limit}")
+
+
+    print(f"Making initial API call for records between 0 and {limit_per_call}")
+
+    # Make initial API call, grab next page token to handle in for loop
     results = make_trials_api_call().json()
-    count_results += len(results)
+    
+    count_results = limit_per_call
+    
     next_page_token = results['nextPageToken']
 
-    count = 0
-    while next_page_token and count < 3:
+    # Overwrite pre-existing data for this first call, append for later calls
+    # in the loop
+    
+    write_data(results, 'trials', append=False)
+
+    # Counter set for testing purposes
+
+    while next_page_token and count_results + limit_per_call <= limit_total:
         time.sleep(2)
-        count += 1
-        print('Making API call')
+        
+        next_results = count_results + limit_per_call
+
+        print(f"Making API call for records {count_results} through \
+              {next_results}")
+        
         results = make_trials_api_call(
-             limit=limit, pageToken=next_page_token).json()
+             limit=limit_per_call, pageToken=next_page_token).json()
+        
+        count_results += limit_per_call
+        
         write_data(results, 'trials')
 
