@@ -1,1 +1,1 @@
-# clinical-trials
+# clinical-trial
