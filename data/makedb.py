@@ -2,10 +2,12 @@ import json
 import sqlite3
 import pathlib
 
+#TODO: Handle pathing better
+
 # Code adapted from PA3
 def schema():
     return """
-    CREATE TABLE trials (
+    CREATE TABLE TRIALS (
     nct_id VARCHAR PRIMARY_KEY
     , brief_title VARCHAR
     , official_title VARCHAR
