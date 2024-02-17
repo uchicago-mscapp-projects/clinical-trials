@@ -1,7 +1,6 @@
 import requests
 import json
 import time
-import pandas as pd
 import os.path
 
 
@@ -14,8 +13,7 @@ import os.path
 API_URL = 'https://www.clinicaltrials.gov/api/v2/studies'
 
 def make_trials_api_call(
-        fields=['BaselineMeasure', 'StatusModule', 'ConditionSearch', 
-                'InterventionType'], limit=10,
+        fields, limit=10,
                          pageToken = None,
                          ) -> {json, str}:
     """
@@ -31,15 +29,13 @@ def make_trials_api_call(
 
     fields = '|'.join(fields)
     payload = {'fields': fields, 'query.intr': 'DRUG', 'pageToken':pageToken,
-               'pageSize': limit, 'cond': 'Diabetes',   
+               'pageSize': limit  
                }
     
     r = requests.get(
         'https://www.clinicaltrials.gov/api/v2/studies', params=payload)
     
     r.raise_for_status()
-
-    print(r.url)
 
     return r
 
@@ -65,7 +61,8 @@ def write_data(data, source, append=True):
     with open(filename, mode=mode) as f:
             f.write(json.dumps(data))
 
-def pull_trials_data(limit_per_call, limit_total):
+def pull_trials_data(limit_per_call, limit_total, fields=['BaselineMeasure', 'StatusModule', 'ConditionSearch', 
+                'InterventionType']):
     """
     Pulls trials data, and writes it to a JSON file.
     Args:
@@ -78,16 +75,14 @@ def pull_trials_data(limit_per_call, limit_total):
     print(f"Making initial API call for records between 0 and {limit_per_call}")
 
     # Make initial API call, grab next page token to handle in for loop
-    results = make_trials_api_call().json()
+    results = []
+    response = make_trials_api_call(fields).json()
+
+    results = response['studies']
     
     count_results = limit_per_call
     
-    next_page_token = results['nextPageToken']
-
-    # Overwrite pre-existing data for this first call, append for later calls
-    # in the loop
-
-    write_data(results, 'trials', append=False)
+    next_page_token = response['nextPageToken']
 
     # Counter set for testing purposes
 
@@ -99,9 +94,13 @@ def pull_trials_data(limit_per_call, limit_total):
         print(f"Making API call for records {count_results} through \
               {next_results}")
         
-        results = make_trials_api_call(
-             limit=limit_per_call, pageToken=next_page_token).json()
+        response = make_trials_api_call(limit=limit_per_call, 
+                fields=fields, pageToken=next_page_token).json()
+        
+        next_page_token = response['nextPageToken']
+        
+        results.extend(response['studies'])
         
         count_results += limit_per_call
         
-        write_data(results, 'trials')
+    write_data(results, 'trials', append=False)
