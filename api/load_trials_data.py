@@ -42,6 +42,7 @@ def generate_baseline_data(filtered_df):
     dataframe to be used for loading to 
     resultsSection.baselineCharacteristicsModule.measures
     """
+    pass
 
 
 
