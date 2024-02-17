@@ -1,0 +1,1 @@
+Added packages to pyproject.toml -- check/discuss with team on Monday for possible version issues before pushing to main
