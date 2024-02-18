@@ -14,7 +14,7 @@ def load_data(filepath):
 
     return pd.json_normalize(from_file)
 
-def generate_trials_data(raw_df, module):
+def generate_trials_data(raw_df, module, headers):
     """
     Takes raw data dataframe and groups it into separate tables
     to be loaded to the sqlite3 schema
@@ -33,7 +33,9 @@ def generate_trials_data(raw_df, module):
         if re.search(module, column):
             module_cols.append(column)
     
-    return raw_df.filter(module_cols, axis=1)
+    filtered = raw_df.filter(module_cols, axis=1)
+    return filtered.rename(columns=headers)
+
 
 def generate_baseline_data(filtered_df):
     """
@@ -42,6 +44,7 @@ def generate_baseline_data(filtered_df):
     dataframe to be used for loading to 
     resultsSection.baselineCharacteristicsModule.measures
     """
+    pass
 
 
 

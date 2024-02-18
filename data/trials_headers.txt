@@ -4,7 +4,7 @@ nct_id
 , status_verified_date
 , overall_status
 , has_expanded_access
-, start_date_date
+, start_date
 , primary_completion_date
 , primary_completion_date_type
 , completion_date
@@ -33,3 +33,4 @@ nct_id
 , keywords
 , last_known_status
 , why_stopped
+

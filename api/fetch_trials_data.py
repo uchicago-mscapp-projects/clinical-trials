@@ -12,10 +12,11 @@ import os.path
 
 API_URL = 'https://www.clinicaltrials.gov/api/v2/studies'
 
+
 def make_trials_api_call(
-        fields, limit=10,
-                         pageToken = None,
-                         ) -> {json, str}:
+    fields, limit=10,
+        pageToken=None,
+) -> {json, str}:
     """
     Makes an API call to NIH's clinical trials API.
 
@@ -23,32 +24,33 @@ def make_trials_api_call(
         - Fields, list: A list of fields to be returned from the API
 
     Returns:
-        - Dict: The returned JSON payload from the API call, and the 
+        - Dict: The returned JSON payload from the API call, and the
         string value of the next page token
     """
 
     fields = '|'.join(fields)
-    payload = {'fields': fields, 'query.intr': 'DRUG', 'pageToken':pageToken,
-               'pageSize': limit  
+    payload = {'fields': fields, 'query.intr': 'DRUG', 'pageToken': pageToken,
+               'pageSize': limit
                }
-    
+
     r = requests.get(
         'https://www.clinicaltrials.gov/api/v2/studies', params=payload)
-    
+
     r.raise_for_status()
 
     return r
 
+
 def write_data(data, source, append=True):
     """
     Writes data returned by an API call to a JSON file format.
-    
+
     Args:
         data (JSON): Data returned from an API call
         filename ('str'): The name of the file to write to
         append (bool): Default to true. If true, will append to the filename
         wrather than overwrite it.
-    
+
     Returns:
         Creates or appends to the file specified.
     """
@@ -56,13 +58,15 @@ def write_data(data, source, append=True):
         mode = 'a'
     else:
         mode = 'w'
-    
+
     filename = os.path.join('./data', source + '.json')
     with open(filename, mode=mode) as f:
-            f.write(json.dumps(data))
+        f.write(json.dumps(data))
 
-def pull_trials_data(limit_per_call, limit_total, fields=['BaselineMeasure', 'StatusModule', 'ConditionSearch', 
-                'InterventionType']):
+
+def pull_trials_data(limit_per_call, limit_total,
+                     fields=['BaselineMeasure', 'StatusModule',
+                             'ConditionSearch', 'InterventionType']):
     """
     Pulls trials data, and writes it to a JSON file.
     Args:
@@ -71,36 +75,35 @@ def pull_trials_data(limit_per_call, limit_total, fields=['BaselineMeasure', 'St
         limit_total (int): The maximum total number of records to return.
     """
 
-
-    print(f"Making initial API call for records between 0 and {limit_per_call}")
+    print(
+        f"Making initial API call for records between 0 and {limit_per_call}"
+    )
 
     # Make initial API call, grab next page token to handle in for loop
     results = []
     response = make_trials_api_call(fields).json()
 
     results = response['studies']
-    
-    count_results = limit_per_call
-    
-    next_page_token = response['nextPageToken']
 
-    # Counter set for testing purposes
+    count_results = limit_per_call
+
+    next_page_token = response['nextPageToken']
 
     while next_page_token and count_results + limit_per_call <= limit_total:
         time.sleep(2)
-        
+
         next_results = count_results + limit_per_call
 
         print(f"Making API call for records {count_results} through \
               {next_results}")
-        
-        response = make_trials_api_call(limit=limit_per_call, 
-                fields=fields, pageToken=next_page_token).json()
-        
+
+        response = make_trials_api_call(limit=limit_per_call,
+            fields=fields, pageToken=next_page_token).json()
+
         next_page_token = response['nextPageToken']
-        
+
         results.extend(response['studies'])
-        
+
         count_results += limit_per_call
-        
+
     write_data(results, 'trials', append=False)
