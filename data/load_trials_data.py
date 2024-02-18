@@ -36,15 +36,32 @@ def generate_trials_data(raw_df, module, headers):
     filtered = raw_df.filter(module_cols, axis=1)
     return filtered.rename(columns=headers)
 
-
+def generate_interventions_data(filtered_df):
+    """
+    Takes a filtered df with the interventions module and normalizes the
+    json rows within it, returns a normalized dataframe to be used for
+    loading to the database
+    """
+    exploded = filtered_df.explode(
+        'interventions')\
+            ['interventions']
+    
+    # Method for parsing nested JSON data derived from stackoverflow: 
+    # https://stackoverflow.com/questions/65942337/how-to-parse-json-column-in-pandas-dataframe-and-concat-the-new-dataframe-to-the
+    
+    merged = filtered_df.merge(pd.DataFrame(exploded.tolist(), 
+        index = exploded.index), left_index=True, right_index=True)
+    
+    return merged.filter(['nct_id', 'name'])
+                        
 def generate_baseline_data(filtered_df):
     """
     Takes a filtered df with the baseline characteristics module
     and normalizes the json rows within it, returns a normalized
-    dataframe to be used for loading to 
-    resultsSection.baselineCharacteristicsModule.measures
+    dataframe to be used for loading to the database
     """
     pass
+
 
 
 

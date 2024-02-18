@@ -5,6 +5,10 @@ SQL tables
 
 trials_headers = {
  'protocolSection.identificationModule.nctId': 'nct_id',
+ 'protocolSection.identificationModule.orgStudyIdInfo.id': 'org_study_id_info',
+ 'protocolSection.identificationModule.secondaryIdInfos': 'secondary_id_infos',
+ 'protocolSection.identificationModule.organization.fullName': 'org_full_name',
+ 'protocolSection.identificationModule.organization.class': 'org_class',
  'protocolSection.identificationModule.briefTitle': 'brief_title',
  'protocolSection.identificationModule.officialTitle': 'official_title'
  }
@@ -70,4 +74,10 @@ conditions_headers = {
 baseline_headers = {
 'protocolSection.identificationModule.nctId': 'nct_id',
 'resultsSection.baselineCharacteristicsModule.measures': 'measures'
+}
+
+interventions_headers = {
+    'protocolSection.identificationModule.nctId': 'nct_id',
+    'protocolSection.armsInterventionsModule.armGroups': 'arm_groups',
+    'protocolSection.armsInterventionsModule.interventions': 'interventions'
 }

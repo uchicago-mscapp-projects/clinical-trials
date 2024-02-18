@@ -44,19 +44,7 @@ def schema():
     , last_known_status VARCHAR
     , why_stopped VARCHAR
     );
-
-    CREATE TABLE CONDITIONS (
-    nct_id VARCHAR PRIMARY KEY
-    , conditions VARCHAR
-    , meshes VARCHAR
-    , ancestors VARCHAR
-    , keywords VARCHAR
-    );
-
-    CREATE TABLE BASELINE_MEASURES (
-    nct_id VARCHAR PRIMARY KEY
-    , measures VARCHAR
-    );
+    
     """
 
 # TODO: This feels a bit unsustainable for the extremely nested JSON we have, either
