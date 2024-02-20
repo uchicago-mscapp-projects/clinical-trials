@@ -73,6 +73,10 @@ conditions_headers = {
 
 baseline_headers = {
 'protocolSection.identificationModule.nctId': 'nct_id',
+'resultsSection.baselineCharacteristicsModule.populationDescription': \
+   'population_description',
+'resultsSection.baselineCharacteristicsModule.groups': 'groups',
+'resultsSection.baselineCharacteristicsModule.denoms': 'denoms',
 'resultsSection.baselineCharacteristicsModule.measures': 'measures'
 }
 

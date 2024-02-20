@@ -65,4 +65,7 @@ def generate_baseline_data(filtered_df):
 
 
 
-    
+    ### CONSIDER: Loops, helper functions ie:
+    ##stmod2trials tatus
+        ## for all trials ...turn dict to sql rows
+        ## 
