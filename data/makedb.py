@@ -5,6 +5,8 @@ import load_trials_data
 import trial_headers
 
 #TODO: Handle pathing better
+# TODO: Group by for drug, condition, participant diversity counts
+# YEAR, MANUFACTURER, DEMOGRAPHICS, DRUG, CONDITION, DRUG TYPE
 
 # Code adapted from PA3
 def schema():
