@@ -4,7 +4,7 @@ import re
 import plotly.express as px
 import plotly.graph_objects as go
 import dash
-from dash import html, dcc, dash_table
+from dash import html, dcc, dash_table, State, callback
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 import json
@@ -14,15 +14,11 @@ import pathlib
 # from .clean_and_analyze import analyze_data
 from .visualization import visualization
 
-# Read in data
+# Read in data: connect to the SQL database
 connection = sqlite3.connect("data/trials.db")
 connection.row_factory = sqlite3.Row
 
 cursor = connection.cursor()
-
-# Test code to make sure the sql connection works
-test = pd.read_sql_query("SELECT DISTINCT nct_id FROM trials LIMIT 10",
-            connection)
 
 # Define lists of possible treatments and of possible manufacturers
 trt_list = pd.read_sql_query("SELECT DISTINCT treatment FROM trials", connection)
@@ -35,9 +31,10 @@ manu_list = pd.read_sql_query("SELECT DISTINCT manufacturer FROM trials", connec
 # for i in data['manufacturer']:
 #         manu_list.append(i)
 
+# App formatting inputs
 colors = {
-    'background': '#FDFEFE',
-    'text': '#17202A'
+    'background': '#333eee',
+    'text': '#a2bfe0'
 }
 
 styles = {
@@ -67,13 +64,17 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                             html.Div(children='''Choose the treatment of interest'''),
                         dcc.Dropdown(id='treatment-dropdown', options=trt_list, 
                             placeholder="Select a treatment", style={'width': '100%'}),
-                        html.H3(id = 'generic_name',style={'textAlign': 'left','color': '#3CB371'}),
-                        html.H3(id = 'brand_name',style={'textAlign': 'left','color': '#3CB371'}),
-                        html.H3(id = 'manufacturer',style={'textAlign': 'left','color': '#3CB371'}),
+                        html.H3(id = 'generic_name',style={'textAlign': 'left','color': colors['text']}),
+                        html.H3(id = 'brand_name',style={'textAlign': 'left','color': colors['text']}),
+                        html.H3(id = 'manufacturer',style={'textAlign': 'left','color': colors['text']}),
+                        # TODO: figure out how to get a dropdown of the conditions for the treatment selected above
+                        #  html.H3(id = 'conditions'),
+                        # dcc.Dropdown(id='condition-dropdown', options=conditions, 
+                        #     placeholder="Select a condition the treatment is used for", style={'width': '100%'}),
                         html.Br(),
                         dcc.Graph(id='stacked-bar', style={'width': '100%'})],
                         # TODO: figure out best way to get the table of stats from visualization.py displayed here
-                        # dash_table.DataTable()
+                        # dash_table.DataTable(),
                             className = 'five columns')
 
 # By manufacturer section
@@ -95,7 +96,7 @@ app.layout = html.Div(children=[
     html.Div(search_treatment, style={"grid-area":"graph_1"}),
     html.Div(search_manufacturer, style={"grid-area":"graph_2"})],
                       style={
-                          'backgroundColor': '#FFFFFF',
+                          'backgroundColor': colors['background'],
                           'display': 'grid',
                           'grid-template-areas': """
                           'header header'
@@ -106,20 +107,27 @@ app.layout = html.Div(children=[
                           'grid-template-rows': 'auto 1fr 1fr'
                       })
 
+# Callback function for searching treatments
 @app.callback(
-        Output(component_id = 'generic-name', component_property ='children'),
-        Input(component_id="treatment-dropdown", component_property='value')
+        Output(component_id = 'treatment-dropdown', component_property ='options'),
+        Input(component_id="treatment-dropdown", component_property='search-value')
         )
 def update_options(search_value):
     if not search_value:
         raise PreventUpdate
     return [o for o in trt_list if search_value in o]
 
+# Callback function for printing the generic name
+@app.callback(
+        Output(component_id = 'generic-name', component_property ='children'),
+        Input(component_id="treatment-dropdown", component_property='value')
+        )
 def update_output_generic(selected_trt):
     generic_name = selected_trt
     
     return "Generic name: {}".format(generic_name)
 
+# Callback function for printing the brand name
 @app.callback(
         Output(component_id = 'brand-name', component_property ='children'),
         Input(component_id="treatment-dropdown", component_property='value')
@@ -127,49 +135,72 @@ def update_output_generic(selected_trt):
 
 def update_output_brand(selected_trt):
     query = "SELECT distinct brand_name FROM trials WHERE generic_name = ?"
-    brand_name = cur.execute(query, (selected_trt))
+    brand_name = connection.execute(query, (selected_trt))
     #row = data.loc[data['generic_name'] == selected_trt]
     #brand_name = row['brand_name']
     
     return "Brand name: {}".format(brand_name)
 
+# Callback function for printing the manufacturer name
 @app.callback(
         Output(component_id = 'manufacturer', component_property ='children'),
         Input(component_id="treatment-dropdown", component_property='value')
         )
 
 def update_output_manufacturer(selected_trt):
-    row = data.loc[data['generic_name'] == selected_trt]
-    manufacturer = row['manufacturer']
+    query = "SELECT distinct manufacturer FROM trials WHERE generic_name = ?"
+    manufacturer = connection.execute(query, (selected_trt))
+    # row = data.loc[data['generic_name'] == selected_trt]
+    # manufacturer = row['manufacturer']
 
     return "Manufacturer: {}".format(manufacturer)
 
+# Callback function for pulling list of conditions for the treatment
+@app.callback(
+        Output(component_id = 'brand-name', component_property ='children'),
+        Input(component_id="treatment-dropdown", component_property='value')
+        )
+
+def update_output_conditions(selected_trt):
+    query = "SELECT distinct conditions FROM trials WHERE generic_name = ?"
+    conditions = connection.execute(query, (selected_trt))
+
+    return conditions
+
+# Callback function for updating the stacked bar chart
 @app.callback(
         Output(component_id='stacked-bar', component_property='figure'),
         Input(component_id="treatment-dropdown", component_property='value')
         )
 
 def update_stackedbar(selected_trt):
-    row = data.loc[data['generic_name'] == selected_trt]
+    query = "SELECT * FROM trials WHERE generic_name = ?"
+    trt_trials = connection.execute(query, (selected_trt))
 
-    fig = by_drug(row)
+    fig = by_drug(trt_trials)
 
     return fig
 
-
+# Callback function for searching manufacturers
 @app.callback(
-        Output(component_id='line-graph', component_property='figure'),
-        Input(component_id="manufacturer-dropdown", component_property='value')
+        Output(component_id='manufacturer-dropdown', component_property='options'),
+        Input(component_id="manufacturer-dropdown", component_property='search-value')
         )
 def update_options(search_value):
     if not search_value:
         raise PreventUpdate
     return [o for o in manu_list if search_value in o]
 
+# Callback function for updating the line graph
+@app.callback(
+        Output(component_id='line-graph', component_property='figure'),
+        Input(component_id="manufacturer-dropdown", component_property='value')
+        )
 def update_linegraph(selected_manu):
-    row = data.loc[data['manufacturer'] == selected_manu]
+    query = "SELECT * FROM trials WHERE manufacturer = ?"
+    manu_trials = connection.execute(query, (selected_manu))
 
-    fig = by_manufacturer(manuf)
+    fig = by_manufacturer(manu_trials)
 
     return fig
 
