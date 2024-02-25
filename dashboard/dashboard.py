@@ -17,7 +17,7 @@ from dash.exceptions import PreventUpdate
 import numpy as np
 
 # Import visualization functions
-from .visualization import by_drug, by_manufacturer, table_by_drug, table_by_manufacturer
+from .visualization import by_drug, by_manufacturer, by_drug_table, by_manufacturer_table
 
 # Read in data: connect to the SQL database
 connection = sqlite3.connect("data/trials.db")
@@ -94,7 +94,7 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                         html.Br(),
                         dcc.Graph(id='stacked-bar', style={'width': '100%'})],
                         # Table of stats from visualization.py
-                        html.Div(id='table-container'),
+                        html.Div(id='table-by-treatment'),
                         # dash_table.DataTable(),
                             className = 'five columns')
 
@@ -134,6 +134,7 @@ app.layout = html.Div(children=[
 ##################################
 
 # Callback function for searching treatments
+    # https://dash.plotly.com/dash-core-components/dropdown
 @app.callback(
         Output(component_id = 'treatment-dropdown', component_property ='options'),
         input = Input(component_id="treatment-dropdown", component_property='search-value')
@@ -184,6 +185,8 @@ def update_output_manufacturer(selected_trt):
     return "Manufacturer: {}".format(manufacturer)
 
 # Callback function for pulling list of conditions for the treatment
+    # https://community.plotly.com/t/callback-interaction-between-2-core-components/24161
+    # https://dash.plotly.com/basic-callbacks
 @app.callback(
         [Output('conditions-dropdown', 'options'),
             Output('conditions-dropdown', 'value')],
@@ -197,6 +200,7 @@ def update_output_conditions(selected_trt):
                       con = connection,
                       params = (selected_trt))
     return conditions
+
 
 # Callback function for updating the stacked bar chart
 @app.callback(
@@ -216,9 +220,10 @@ def update_stackedbar(selected_trt, selected_cond):
 
     return fig
 
+
 # Callback for updating the table underneath the stacked bar chart
     # https://community.plotly.com/t/display-tables-in-dash/4707/13
-@app.callback(Output('table-container', 'children'), 
+@app.callback(Output('table-by-treatment', 'children'), 
         Input(component_id="treatment-dropdown", component_property='value'),
         Input(component_id="conditions-dropdown", component_property='value'))
 def update_table(selected_trt, selected_cond):
@@ -250,8 +255,25 @@ def update_options(search_value):
         )
 def update_linegraph(selected_manu):
     query = "SELECT * FROM trials WHERE manufacturer = ?"
-    manu_trials = connection.execute(query, (selected_manu))
+    manu_trials = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_manu))
 
     fig = by_manufacturer(manu_trials)
 
     return fig
+
+# Callback for updating the table underneath the line graph by manufacturer
+    # https://community.plotly.com/t/display-tables-in-dash/4707/13
+@app.callback(Output('table-by-manufacturer', 'children'), 
+        Input(component_id="manufacturer-dropdown", component_property='value'))
+def update_table(selected_manu):
+    query = "SELECT * FROM trials WHERE manufacturer = ?"
+
+    manu_trials = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_manu))
+    
+    table_by_manu = by_manufacturer_table(manu_trials)
+
+    return generate_table(table_by_manu)
