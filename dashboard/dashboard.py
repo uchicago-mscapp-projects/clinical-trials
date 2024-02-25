@@ -1,18 +1,23 @@
+'''
+Dashboard app
+Author: David Steffen
+'''
+
+##################################
+### Setup and data import  #######
+##################################
+
+# Import statements
 import pandas as pd
 import sqlite3
-import re
-import plotly.express as px
-import plotly.graph_objects as go
 import dash
-from dash import html, dcc, dash_table, State, callback
+from dash import html, dcc, Dash, dash_table, State, callback
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
-import json
 import numpy as np
-import pathlib
 
-# from .clean_and_analyze import analyze_data
-from .visualization import visualization
+# Import visualization functions
+from .visualization import by_drug, by_manufacturer, table_by_drug, table_by_manufacturer
 
 # Read in data: connect to the SQL database
 connection = sqlite3.connect("data/trials.db")
@@ -27,9 +32,25 @@ trt_list = pd.read_sql_query("SELECT DISTINCT treatment FROM trials", connection
 #         trt_list.append(i)
 
 manu_list = pd.read_sql_query("SELECT DISTINCT manufacturer FROM trials", connection)
-# manu_list = []
-# for i in data['manufacturer']:
-#         manu_list.append(i)
+
+# Table function
+    # https://dash.plotly.com/layout
+def generate_table(dataframe, max_rows=10):
+    return html.Table([
+        html.Thead(
+            html.Tr([html.Th(col) for col in dataframe.columns])
+        ),
+        html.Tbody([
+            html.Tr([
+                html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
+            ]) for i in range(min(len(dataframe), max_rows))
+        ])
+    ])
+
+
+##################################
+### App structure  ###############
+##################################
 
 # App formatting inputs
 colors = {
@@ -44,7 +65,7 @@ styles = {
     }
 }
 
-#App
+# App call
 app = dash.Dash(
     __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}],
 )
@@ -55,7 +76,7 @@ header_and_intro = html.Div([html.H1(children='Racial and Ethnicity Representati
                         html.Div(children='''Placeholder ''',
                                 style={'textAlign': 'left','color': colors['text'],'width' : '100%','padding' :5})])
 
-# By treatment section
+# Search by treatment section
 search_treatment = html.Div([html.H2(children='Search by treatment',
                                       style={'textAlign': 'center','color': colors['text']}),
                             html.Div(children='''Placeholder''',
@@ -67,13 +88,13 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                         html.H3(id = 'generic_name',style={'textAlign': 'left','color': colors['text']}),
                         html.H3(id = 'brand_name',style={'textAlign': 'left','color': colors['text']}),
                         html.H3(id = 'manufacturer',style={'textAlign': 'left','color': colors['text']}),
-                        # TODO: figure out how to get a dropdown of the conditions for the treatment selected above
-                        #  html.H3(id = 'conditions'),
-                        # dcc.Dropdown(id='condition-dropdown', options=conditions, 
-                        #     placeholder="Select a condition the treatment is used for", style={'width': '100%'}),
+                        # Dropdown of the conditions for the treatment selected above
+                        dcc.Dropdown(id='conditions-dropdown', 
+                            placeholder="Select a condition the treatment is used for", style={'width': '100%'}),
                         html.Br(),
                         dcc.Graph(id='stacked-bar', style={'width': '100%'})],
-                        # TODO: figure out best way to get the table of stats from visualization.py displayed here
+                        # Table of stats from visualization.py
+                        html.Div(id='table-container'),
                         # dash_table.DataTable(),
                             className = 'five columns')
 
@@ -107,10 +128,15 @@ app.layout = html.Div(children=[
                           'grid-template-rows': 'auto 1fr 1fr'
                       })
 
+
+##################################
+### Callback functions ###########
+##################################
+
 # Callback function for searching treatments
 @app.callback(
         Output(component_id = 'treatment-dropdown', component_property ='options'),
-        Input(component_id="treatment-dropdown", component_property='search-value')
+        input = Input(component_id="treatment-dropdown", component_property='search-value')
         )
 def update_options(search_value):
     if not search_value:
@@ -122,12 +148,11 @@ def update_options(search_value):
         Output(component_id = 'generic-name', component_property ='children'),
         Input(component_id="treatment-dropdown", component_property='value')
         )
-def update_output_generic(selected_trt):
-    generic_name = selected_trt
-    
-    return "Generic name: {}".format(generic_name)
 
-# Callback function for printing the brand name
+def update_output_generic(selected_trt):    
+    return "Generic name: {}".format(selected_trt)
+
+# Callback function for printing the brand name(s)
 @app.callback(
         Output(component_id = 'brand-name', component_property ='children'),
         Input(component_id="treatment-dropdown", component_property='value')
@@ -135,11 +160,14 @@ def update_output_generic(selected_trt):
 
 def update_output_brand(selected_trt):
     query = "SELECT distinct brand_name FROM trials WHERE generic_name = ?"
-    brand_name = connection.execute(query, (selected_trt))
+
+    brand_name = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt))
     #row = data.loc[data['generic_name'] == selected_trt]
     #brand_name = row['brand_name']
     
-    return "Brand name: {}".format(brand_name)
+    return "Brand name(s): {}".format(brand_name)
 
 # Callback function for printing the manufacturer name
 @app.callback(
@@ -149,37 +177,61 @@ def update_output_brand(selected_trt):
 
 def update_output_manufacturer(selected_trt):
     query = "SELECT distinct manufacturer FROM trials WHERE generic_name = ?"
-    manufacturer = connection.execute(query, (selected_trt))
-    # row = data.loc[data['generic_name'] == selected_trt]
-    # manufacturer = row['manufacturer']
 
+    manufacturer = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt))
     return "Manufacturer: {}".format(manufacturer)
 
 # Callback function for pulling list of conditions for the treatment
 @app.callback(
-        Output(component_id = 'brand-name', component_property ='children'),
+        [Output('conditions-dropdown', 'options'),
+            Output('conditions-dropdown', 'value')],
         Input(component_id="treatment-dropdown", component_property='value')
         )
 
 def update_output_conditions(selected_trt):
     query = "SELECT distinct conditions FROM trials WHERE generic_name = ?"
-    conditions = connection.execute(query, (selected_trt))
 
+    conditions = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt))
     return conditions
 
 # Callback function for updating the stacked bar chart
 @app.callback(
         Output(component_id='stacked-bar', component_property='figure'),
-        Input(component_id="treatment-dropdown", component_property='value')
+        Input(component_id="treatment-dropdown", component_property='value'),
+        Input(component_id="conditions-dropdown", component_property='value')
         )
 
-def update_stackedbar(selected_trt):
-    query = "SELECT * FROM trials WHERE generic_name = ?"
-    trt_trials = connection.execute(query, (selected_trt))
+def update_stackedbar(selected_trt, selected_cond):
+    query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
+
+    trt_trials = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt, selected_cond))
 
     fig = by_drug(trt_trials)
 
     return fig
+
+# Callback for updating the table underneath the stacked bar chart
+    # https://community.plotly.com/t/display-tables-in-dash/4707/13
+@app.callback(Output('table-container', 'children'), 
+        Input(component_id="treatment-dropdown", component_property='value'),
+        Input(component_id="conditions-dropdown", component_property='value'))
+def update_table(selected_trt, selected_cond):
+    query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
+
+    trt_trials = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt, selected_cond))
+    
+    table_by_drug = by_drug_table(trt_trials)
+
+    return generate_table(table_by_drug)
+
 
 # Callback function for searching manufacturers
 @app.callback(
@@ -203,4 +255,3 @@ def update_linegraph(selected_manu):
     fig = by_manufacturer(manu_trials)
 
     return fig
-
