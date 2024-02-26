@@ -15,38 +15,46 @@ def schema():
     nct_id VARCHAR PRIMARY KEY
     , brief_title VARCHAR
     , official_title VARCHAR
+    , lead_sponsor
     );
 
     CREATE TABLE TRIAL_STATUS (
     nct_id VARCHAR PRIMARY KEY
     , status_verified_date DATE
     , overall_status VARCHAR
-    , has_expanded_access BOOLEAN
     , start_date DATE
-    , primary_completion_date DATE
-    , primary_completion_date_type VARCHAR
-    , completion_date DATE
-    , completion_date_type VARCHAR
-    , first_submit_date DATE
-    , first_submit_qc_date DATE
-    , first_post_date DATE
-    , first_post_date_type VARCHAR
-    , results_first_submit_date DATE
-    , results_first_submit_qc_date DATE
-    , results_first_post_date DATE
-    , results_first_post_date_type VARCHAR
-    , last_update_submit_date DATE
-    , last_update_post_date DATE
-    , last_update_post_date_type VARCHAR
-    , start_date_type VARCHAR
-    , disp_first_submit_date DATE
-    , disp_first_submit_qc_date DATE
-    , disp_first_post_date DATE
-    , disp_first_post_date_type VARCHAR
+    , completion_date
     , last_known_status VARCHAR
     , why_stopped VARCHAR
     );
-    
+
+    CREATE TABLE TRIAL_LOCATIONS (
+    nct_id VARCHAR PRIMARY KEY
+    , city VARCHAR
+    , country VARCHAR
+    );
+
+    CREATE TABLE TRIAL_INTERVENTIONS (
+    nct_id VARCHAR PRIMARY KEY
+    , INTERVENTION
+    );
+
+    CREATE TABLE TRIAL_CONDITIONS (
+    nct_id VARCHAR PRIMARY KEY
+    , CONDITION
+    );
+
+    CREATE TABLE RACE_BY_TRIAL (
+    nct_id VARCHAR PRIMARY KEY
+    , RACE
+    , TOTAL
+    );
+
+    CREATE TABLE SEX_BY_TRIAL (
+    nct_id VARCHAR PRIMARY KEY
+    , SEX
+    , TOTAL
+    );
     """
 
 # TODO: This feels a bit unsustainable for the extremely nested JSON we have, either

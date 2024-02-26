@@ -3,9 +3,6 @@ import json
 import time
 import os.path
 
-
-# TODO: Handle creating/overwriting files
-# TODO: Handle converting JSON to readable/searchable type
 # TODO: Examine data
 # TODO: Implement API call class function?
 
@@ -30,8 +27,10 @@ def make_trials_api_call(
 
     fields = '|'.join(fields)
     payload = {'fields': fields, 'query.intr': 'AREA[InterventionType]DRUG', 
-               'pageToken': pageToken, 'pageSize': limit_per_call,
-               'postFilter.advanced': 'AREA[IsFDARegulatedDrug]true'}
+        'pageToken': pageToken, 'pageSize': limit_per_call,
+        'postFilter.advanced': \
+        'AREA[IsFDARegulatedDrug]true AND AREA[Phase](PHASE3 OR PHASE4)',
+        'query.locn': 'AREA[LocationCountry]United States'}
 
     r = requests.get(
         'https://www.clinicaltrials.gov/api/v2/studies', params=payload)
@@ -39,7 +38,6 @@ def make_trials_api_call(
     r.raise_for_status()
 
     return r
-
 
 def write_data(data, source, append=True):
     """
@@ -65,9 +63,12 @@ def write_data(data, source, append=True):
 
 
 def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
-                     fields=['IdentificationModule','BaselineCharacteristicsModule',
-                             'ArmsInterventionsModule', 'ConditionsModule',
-                             'StatusModule']):
+                     fields=['NCTId', 'BriefTitle', 'OfficialTitle','Condition',
+'StatusModule', 'InterventionName', 'InterventionOtherName', 'Phase', 'BriefSummary', 'Keyword',
+'ArmGroupLabel', 'InterventionDescription', 'ArmGroupDescription',
+'LeadSponsorName', 'LocationCity', 'LocationCountry', 'StudyType', 'BaselineCharacteristicsModule',
+'OutcomeMeasurePopulationDescription'
+]):
     """
     Pulls trials data, and writes it to a JSON file.
     Args:
@@ -94,18 +95,23 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
     while next_page_token and count_results + limit_per_call <= limit_total:
         time.sleep(2)
 
-        next_results = count_results + limit_per_call
+        try: 
+            next_results = count_results + limit_per_call
 
-        print(f"Making API call for records {count_results} through \
-              {next_results}")
+            print(f"Making API call for records {count_results} through {next_results}")
 
-        response = make_trials_api_call(limit_per_call=limit_per_call,
-            fields=fields, pageToken=next_page_token).json()
+            response = make_trials_api_call(limit_per_call=limit_per_call,
+                fields=fields, pageToken=next_page_token).json()
 
-        next_page_token = response['nextPageToken']
+            next_page_token = response['nextPageToken']
 
-        results.extend(response['studies'])
+            results.extend(response['studies'])
 
-        count_results += limit_per_call
+            count_results += limit_per_call
+        
+        except KeyError:
+            print("API pull complete.")
+            results.extend(response['studies'])
+            break
 
     write_data(results, 'trials', append=False)
