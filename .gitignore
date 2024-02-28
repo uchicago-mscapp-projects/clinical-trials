@@ -3,3 +3,4 @@ data/*.json
 data/*.csv
 testing.ipynb
 .ipynb_checkpoints/
+.VSCodeCounter*/*
