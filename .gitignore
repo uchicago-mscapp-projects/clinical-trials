@@ -1,6 +1,8 @@
 __pycache__
 data/*.json
 data/*.csv
+api/*json*
+api/data/.fda.json.icloud
 testing.ipynb
 .ipynb_checkpoints/
 .VSCodeCounter*/*
