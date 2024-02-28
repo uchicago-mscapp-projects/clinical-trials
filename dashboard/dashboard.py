@@ -17,7 +17,8 @@ from dash.exceptions import PreventUpdate
 import numpy as np
 
 # Import visualization functions
-from .visualization import by_drug, by_manufacturer, by_drug_table, by_manufacturer_table
+from .visualization import by_drug, by_manufacturer
+from .visualization import summary_statistics_table, summary_statistics_manufacturer_table
 
 # Read in data: connect to the SQL database
 connection = sqlite3.connect("data/trials.db")
@@ -26,12 +27,14 @@ connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 
 # Define lists of possible treatments and of possible manufacturers
-trt_list = pd.read_sql_query("SELECT DISTINCT treatment FROM trials", connection)
+trials_query = "SELECT DISTINCT INTERVENTION FROM TRIAL_INTERVENTIONS"
+trt_list = pd.read_sql_query(trials_query, connection)
+#trt_list = pd.read_sql_query("SELECT DISTINCT intervention FROM trials", connection)
 # trt_list = []
 # for i in data['generic_name']:
 #         trt_list.append(i)
 
-manu_list = pd.read_sql_query("SELECT DISTINCT manufacturer FROM trials", connection)
+manu_list = pd.read_sql_query("SELECT DISTINCT lead_sponsor FROM TRIALS", connection)
 
 # Table function
     # https://dash.plotly.com/layout
@@ -150,8 +153,16 @@ def update_options(search_value):
         Input(component_id="treatment-dropdown", component_property='value')
         )
 
-def update_output_generic(selected_trt):    
-    return "Generic name: {}".format(selected_trt)
+def update_output_generic(selected_trt):
+    query = "SELECT distinct TRIAL_INTERVENTIONS.brand_name \
+    FROM TRIAL_INTERVENTIONS \
+    WHERE INTERVENTION = ?"    
+
+    generic_name = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt))
+
+    return "Generic name: {}".format(generic_name)
 
 # Callback function for printing the brand name(s)
 @app.callback(
@@ -160,7 +171,10 @@ def update_output_generic(selected_trt):
         )
 
 def update_output_brand(selected_trt):
-    query = "SELECT distinct brand_name FROM trials WHERE generic_name = ?"
+    query = "SELECT distinct TRIAL_INTERVENTIONS.brand_name \
+    FROM TRIAL_INTERVENTIONS \
+    WHERE INTERVENTION = ?"
+    # query = "SELECT distinct brand_name FROM trials WHERE generic_name = ?"
 
     brand_name = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -177,7 +191,12 @@ def update_output_brand(selected_trt):
         )
 
 def update_output_manufacturer(selected_trt):
-    query = "SELECT distinct manufacturer FROM trials WHERE generic_name = ?"
+    query = "SELECT distinct TRIALS.lead_sponsor \
+    FROM TRIAL_INTERVENTIONS \
+    INNER JOIN TRIALS \
+    ON TRIAL_INTERVENTIONS.nct_id = TRIALS.nct_id \
+    WHERE TRIAL_INTERVENTIONS.INTERVENTION = ?"
+    # query = "SELECT distinct manufacturer FROM trials WHERE generic_name = ?"
 
     manufacturer = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -194,7 +213,12 @@ def update_output_manufacturer(selected_trt):
         )
 
 def update_output_conditions(selected_trt):
-    query = "SELECT distinct conditions FROM trials WHERE generic_name = ?"
+    query = "SELECT distinct TRIAL_CONDITIONS.CONDITION \
+    FROM TRIAL_INTERVENTIONS \
+    INNER JOIN TRIAL_CONDITIONS \
+    ON TRIAL_INTERVENTIONS.nct_id = TRIAL_CONDITIONS.nct_id \
+    WHERE TRIAL_INTERVENTIONS.INTERVENTION = ?"
+    # query = "SELECT distinct conditions FROM trial_conditions WHERE generic_name = ?"
 
     conditions = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -210,7 +234,15 @@ def update_output_conditions(selected_trt):
         )
 
 def update_stackedbar(selected_trt, selected_cond):
-    query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
+    # make sure the like is case insensitive
+    query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
+    INNER JOIN TRIAL_INTERVENTIONS \
+    on TRIALS.nct_id = TRIAL_INTERVENTIONS.nct_id \
+    INNER JOIN TRIAL_CONDITIONS \
+    on RACE_BY_TRIAL.nct_id = TRIAL_CONDITIONS.nct_id \
+    WHERE TRIAL_INTERVENTIONS.INTERVENTION LIKE ? \
+    AND TRIAL_CONDITIONS.CONDITION LIKE ?"
+    # query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
 
     trt_trials = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -227,13 +259,20 @@ def update_stackedbar(selected_trt, selected_cond):
         Input(component_id="treatment-dropdown", component_property='value'),
         Input(component_id="conditions-dropdown", component_property='value'))
 def update_table(selected_trt, selected_cond):
-    query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
+    query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
+    INNER JOIN TRIAL_INTERVENTIONS \
+    on TRIALS.nct_id = TRIAL_INTERVENTIONS.nct_id \
+    INNER JOIN TRIAL_CONDITIONS \
+    on RACE_BY_TRIAL.nct_id = TRIAL_CONDITIONS.nct_id \
+    WHERE TRIAL_INTERVENTIONS.INTERVENTION LIKE ? \
+    AND TRIAL_CONDITIONS.CONDITION LIKE ?"
+    # query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
 
     trt_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_trt, selected_cond))
     
-    table_by_drug = by_drug_table(trt_trials)
+    table_by_drug = summary_statistics_table(trt_trials)
 
     return generate_table(table_by_drug)
 
@@ -254,7 +293,11 @@ def update_options(search_value):
         Input(component_id="manufacturer-dropdown", component_property='value')
         )
 def update_linegraph(selected_manu):
-    query = "SELECT * FROM trials WHERE manufacturer = ?"
+    query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
+    INNER JOIN TRIALS \
+    on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
+    WHERE TRIALS.lead_sponsor LIKE ? "
+    # query = "SELECT * FROM trials WHERE manufacturer = ?"
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_manu))
@@ -268,12 +311,16 @@ def update_linegraph(selected_manu):
 @app.callback(Output('table-by-manufacturer', 'children'), 
         Input(component_id="manufacturer-dropdown", component_property='value'))
 def update_table(selected_manu):
-    query = "SELECT * FROM trials WHERE manufacturer = ?"
+    query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
+    INNER JOIN TRIALS \
+    on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
+    WHERE TRIALS.lead_sponsor LIKE ? "
+    # query = "SELECT * FROM trials WHERE manufacturer = ?"
 
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_manu))
     
-    table_by_manu = by_manufacturer_table(manu_trials)
+    table_by_manu = summary_statistics_manufacturer_table(manu_trials)
 
     return generate_table(table_by_manu)
