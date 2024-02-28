@@ -1,53 +1,85 @@
-import json
 import sqlite3
 import pathlib
+import load_trials_data
 
 #TODO: Handle pathing better
+# TODO: Group by for drug, condition, participant diversity counts
+# YEAR, MANUFACTURER, DEMOGRAPHICS, DRUG, CONDITION, DRUG TYPE
 
 # Code adapted from PA3
 def schema():
     return """
     CREATE TABLE TRIALS (
-    nct_id VARCHAR PRIMARY_KEY
+    nct_id VARCHAR PRIMARY KEY
     , brief_title VARCHAR
     , official_title VARCHAR
-    );    
+    , lead_sponsor
+    );
+
+    CREATE TABLE TRIAL_STATUS (
+    nct_id VARCHAR PRIMARY KEY
+    , status_verified_date DATE
+    , overall_status VARCHAR
+    , start_date DATE
+    , completion_date
+    , last_known_status VARCHAR
+    , why_stopped VARCHAR
+    );
+
+    CREATE TABLE TRIAL_LOCATIONS (
+    nct_id VARCHAR PRIMARY KEY
+    , city VARCHAR
+    , country VARCHAR
+    );
+
+    CREATE TABLE TRIAL_INTERVENTIONS (
+    nct_id VARCHAR PRIMARY KEY
+    , invervention
+    );
+
+    CREATE TABLE TRIAL_CONDITIONS (
+    nct_id VARCHAR PRIMARY KEY
+    , condition
+    );
+
+    CREATE TABLE RACE_BY_TRIAL (
+    nct_id VARCHAR PRIMARY KEY
+    , race
+    , total
+    );
+
+    CREATE TABLE SEX_BY_TRIAL (
+    nct_id VARCHAR PRIMARY KEY
+    , sex
+    , total
+    );
     """
 
 # TODO: This feels a bit unsustainable for the extremely nested JSON we have, either
 # figure out a more officient way to handle this or pull fewer fields from the API
 def makedb():
-    """ (re)create database from a normalized_parks.json from PA #2 """
-    
-    # remove database if it exists already
+
     path = pathlib.Path("data/trials.db")
     path.unlink()
-    
-    # connect to fresh database & create tables
+
     conn = sqlite3.connect(path)
     c = conn.cursor()
     c.executescript(schema())
 
-    with open("data/trials.json") as f:
-        trials = json.load(f)
-        
-    # need id_ for generate_times & easy access to foreign key
-    for _, trial in enumerate(trials):
+    raw_data = load_trials_data.load_data('data/trials.json')
 
-        
-        # TODO: Is there a more efficient way to do this?
-        c.execute(
-            "INSERT INTO trials (nct_id, brief_title, official_title) VALUES (?, ?, ?)",
-            (
-                trial['protocolSection']['identificationModule']['nctId'],
-                trial['protocolSection']['identificationModule']['briefTitle'],
-                trial['protocolSection']['identificationModule'].get('officialTitle', None)
-            ),
-        )
+    trials_data = load_trials_data.generate_trials_data(raw_data, 
+            'identificationModule', trial_headers.trials_headers)
+    
+    trials_data.to_sql('TRIALS', con=conn, if_exists='append', index=False)
 
-        c.execute("COMMIT")
+    status_data = load_trials_data.generate_trials_data(raw_data, 
+            'statusModule', trial_headers.status_headers)
+    
+    status_data.to_sql(
+        'TRIAL_STATUS', con=conn, if_exists='append', index=False)
+    
     c.close()
-
 
 if __name__ == "__main__":
     makedb()
