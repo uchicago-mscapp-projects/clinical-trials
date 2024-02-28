@@ -18,7 +18,7 @@ import numpy as np
 
 # Import visualization functions
 from .visualization import by_drug, by_manufacturer
-from .visualization import summary_statistics_table, summary_statistics_manufacturer_table
+from .visualization import summary_statistics_table, summary_statistics_manuf_table
 
 # Read in data: connect to the SQL database
 connection = sqlite3.connect("data/trials.db")
@@ -36,8 +36,7 @@ trt_list = pd.read_sql_query(trials_query, connection)
 
 manu_list = pd.read_sql_query("SELECT DISTINCT lead_sponsor FROM TRIALS", connection)
 
-# Table function
-    # https://dash.plotly.com/layout
+# Table function from https://dash.plotly.com/layout
 def generate_table(dataframe, max_rows=10):
     return html.Table([
         html.Thead(
@@ -112,6 +111,8 @@ search_manufacturer = html.Div([html.H2(children='Search by manufacturer',
                             placeholder="Select a manufacturer", style={'width': '100%'}),
                         html.Br(),
                         dcc.Graph(id='line-graph', style={'width': '100%'})],
+                        # Table of stats from visualization.py
+                        html.Div(id='table-by-manufacturer'),
                        className = 'five columns')
 
 # Define app layout
@@ -147,6 +148,7 @@ def update_options(search_value):
         raise PreventUpdate
     return [o for o in trt_list if search_value in o]
 
+
 # Callback function for printing the generic name
 @app.callback(
         Output(component_id = 'generic-name', component_property ='children'),
@@ -163,6 +165,7 @@ def update_output_generic(selected_trt):
                       params = (selected_trt))
 
     return "Generic name: {}".format(generic_name)
+
 
 # Callback function for printing the brand name(s)
 @app.callback(
@@ -184,6 +187,7 @@ def update_output_brand(selected_trt):
     
     return "Brand name(s): {}".format(brand_name)
 
+
 # Callback function for printing the manufacturer name
 @app.callback(
         Output(component_id = 'manufacturer', component_property ='children'),
@@ -202,6 +206,7 @@ def update_output_manufacturer(selected_trt):
                       con = connection,
                       params = (selected_trt))
     return "Manufacturer: {}".format(manufacturer)
+
 
 # Callback function for pulling list of conditions for the treatment
     # https://community.plotly.com/t/callback-interaction-between-2-core-components/24161
@@ -258,7 +263,7 @@ def update_stackedbar(selected_trt, selected_cond):
 @app.callback(Output('table-by-treatment', 'children'), 
         Input(component_id="treatment-dropdown", component_property='value'),
         Input(component_id="conditions-dropdown", component_property='value'))
-def update_table(selected_trt, selected_cond):
+def update_table_by_treatment(selected_trt, selected_cond):
     query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
     INNER JOIN TRIAL_INTERVENTIONS \
     on TRIALS.nct_id = TRIAL_INTERVENTIONS.nct_id \
@@ -306,11 +311,12 @@ def update_linegraph(selected_manu):
 
     return fig
 
+
 # Callback for updating the table underneath the line graph by manufacturer
     # https://community.plotly.com/t/display-tables-in-dash/4707/13
 @app.callback(Output('table-by-manufacturer', 'children'), 
         Input(component_id="manufacturer-dropdown", component_property='value'))
-def update_table(selected_manu):
+def update_table_by_manufacturer(selected_manu):
     query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
     INNER JOIN TRIALS \
     on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
@@ -321,6 +327,6 @@ def update_table(selected_manu):
                       con = connection,
                       params = (selected_manu))
     
-    table_by_manu = summary_statistics_manufacturer_table(manu_trials)
+    table_by_manu = summary_statistics_manuf_table(manu_trials)
 
     return generate_table(table_by_manu)
