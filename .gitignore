@@ -1,4 +1,5 @@
 __pycache__
+api/data*
 data/*.json
 testing.ipynb
 .ipynb_checkpoints/
