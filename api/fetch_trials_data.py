@@ -66,9 +66,9 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
                      fields=['NCTId', 'BriefTitle', 'OfficialTitle','Condition',
 'StatusModule', 'InterventionName', 'InterventionOtherName', 'Phase', 'BriefSummary', 'Keyword',
 'ArmGroupLabel', 'InterventionDescription', 'ArmGroupDescription',
-'LeadSponsorName', 'LocationCity', 'LocationCountry', 'StudyType', 'BaselineCharacteristicsModule',
-'OutcomeMeasurePopulationDescription'
+'LeadSponsorName', 'LocationCity', 'LocationCountry', 'StudyType', 'BaselineCharacteristicsModule'
 ]):
+
     """
     Pulls trials data, and writes it to a JSON file.
     Args:
