@@ -16,6 +16,7 @@ def by_drug(drug, condition_of_interest = None):
     """
     Filter race/ethnicity breakdown by treatment and condition 
     """
+    # ULTIM, DATA_DRUG WON'T BE NEC CUZ WE WILL READ A FILTERED DATA INSTEAD
     data_drug = data[data['Drug Name'] == drug]
     if condition_of_interest:
         data_drug = data_drug[data_drug['Condition'] == condition_of_interest]
@@ -104,6 +105,7 @@ def by_manufacturer(manuf):
     """
     Filter race/ethnicity breakdown by manufacturer
     """
+    # ULTIM, DATA_MANUF WON'T BE NEC CUZ WE WILL READ A FILTERED DATA INSTEAD
     data_manuf = data_manufacturer[data_manufacturer['Manufacturer'] == manuf]
 
     # SOURCE: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.
@@ -210,3 +212,41 @@ def summary_statistics_manuf_table(manuf, data):
     })
 
     return df_manuf
+
+
+
+#### title in generate_table():
+
+# Table function from https://dash.plotly.com/layout
+
+# Including certain headers in the input for generate_table()
+# SOURCE 0: https://community.plotly.com/t/formatting-table-headers/29942
+
+# html.Div([]): Create HTML table using Table feature from Dash
+# SOURCE 1: https://community.plotly.com/t/dataframe-to-html-table-using-dash/5009
+
+# html.H1(object): Type of style in HTML
+# SOURCE 2: https://www.w3schools.com/tags/tag_hn.asp
+
+# Putting an object inside <div> tag
+# SOURCE 3: https://www.digitalocean.com/community/tutorials/how-to-style-the-
+# html-div-element-with-css
+
+def generate_table(dataframe, title = "None", max_rows=10):
+    summary_stat_table = html.Table([
+        html.Thead(
+            html.Tr([html.Th(col) for col in dataframe.columns])
+        ),
+        html.Tbody([
+            html.Tr([
+                html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
+            ]) for i in range(min(len(dataframe), max_rows))
+        ])
+    ])
+    return html.Div([
+        html.H1(title),
+        summary_stat_table
+    ])
+
+# For example:
+generate_table(dataframe_manuf, title = "*manuf title*")
