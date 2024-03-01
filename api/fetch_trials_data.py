@@ -115,3 +115,6 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
             break
 
     write_data(results, 'trials', append=False)
+
+if __name__ == "__main__":
+    pull_trials_data()
