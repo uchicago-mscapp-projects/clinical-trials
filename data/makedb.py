@@ -1,6 +1,8 @@
 import sqlite3
 import pathlib
-import load_trials_data
+import os.path
+import pandas as pd
+from . import load_trials_data
 
 #TODO: Handle pathing better
 # TODO: Group by for drug, condition, participant diversity counts
@@ -34,12 +36,13 @@ def schema():
 
     CREATE TABLE TRIAL_INTERVENTIONS (
     nct_id VARCHAR PRIMARY KEY
-    , invervention
+    , intervention_name
     );
 
     CREATE TABLE TRIAL_CONDITIONS (
     nct_id VARCHAR PRIMARY KEY
     , condition
+    , keyword
     );
 
     CREATE TABLE RACE_BY_TRIAL (
@@ -50,13 +53,12 @@ def schema():
 
     CREATE TABLE SEX_BY_TRIAL (
     nct_id VARCHAR PRIMARY KEY
-    , sex
+    , female
+    , male
     , total
     );
     """
 
-# TODO: This feels a bit unsustainable for the extremely nested JSON we have, either
-# figure out a more officient way to handle this or pull fewer fields from the API
 def makedb():
 
     path = pathlib.Path("data/trials.db")
@@ -66,18 +68,13 @@ def makedb():
     c = conn.cursor()
     c.executescript(schema())
 
-    raw_data = load_trials_data.load_data('data/trials.json')
+    load_trials_data.generate_trial_csvs('data/trials.json')
 
-    trials_data = load_trials_data.generate_trials_data(raw_data, 
-            'identificationModule', trial_headers.trials_headers)
-    
-    trials_data.to_sql('TRIALS', con=conn, if_exists='append', index=False)
+    for file in os.listdir('data/csvs'):
+        df = pd.read_csv(f'data/csvs/{file}')
+        table_name = file.split('.')[0]
 
-    status_data = load_trials_data.generate_trials_data(raw_data, 
-            'statusModule', trial_headers.status_headers)
-    
-    status_data.to_sql(
-        'TRIAL_STATUS', con=conn, if_exists='append', index=False)
+        df.to_sql(table_name, con=conn, if_exists='append', index=False)
     
     c.close()
 

@@ -4,16 +4,7 @@ import re
 import json
 import pandas as pd
 import csv
-
-def load_data(filepath):
-    """
-    Loads returned trials data into a pandas dataframe
-    """
-
-    # Load as a series to handle nested data
-    from_file = pd.read_json(filepath, typ='series')
-
-    return pd.json_normalize(from_file)
+from .recode import RECODE
 
 def extract_fields(row):
         """
@@ -27,33 +18,33 @@ def extract_fields(row):
 
         fields = {'nct_id': identification_module.get('nctId', {}),
                   
-        'brief_title': identification_module.get('briefTitle', {}),
+        'brief_title': identification_module.get('briefTitle', None),
 
-        'official_title': identification_module.get('officialTitle', {}),
+        'official_title': identification_module.get('officialTitle', None),
 
         'lead_sponsor': protocol_section.get('sponsorCollaboratorsModule', {})\
-            .get('leadSponsor', {}).get('name', {}),
+            .get('leadSponsor', {}).get('name', None),
 
-        'overall_status': status_module.get('overallStatus', {}),
+        'overall_status': status_module.get('overallStatus', None),
 
-        'start_date': status_module.get('startDate', {}),
+        'start_date': status_module.get('startDate', None),
 
-        'completion_date': status_module.get('completionDate', {}),
+        'completion_date': status_module.get('completionDate', None),
 
-        'why_stopped': status_module.get('whyStopped', {}),
+        'why_stopped': status_module.get('whyStopped', None),
 
         'locations': protocol_section.get('contactsLocationsModule', {})\
-            .get('locations', {}),
+            .get('locations', None),
 
-        'intervention_name': protocol_section.get('armsInterventionsModule', {})\
-            .get('interventions', {}),
+        'intervention_name': protocol_section.get('armsInterventionsModule', None)\
+            .get('interventions', None),
 
-        'conditions': conditions_module.get('conditions', {}),
+        'conditions': conditions_module.get('conditions', None),
 
-        'keywords': conditions_module.get('keywords', {}),
+        'keywords': conditions_module.get('keywords', None)
         
-        'measures': row.get('resultsSection', {})\
-            .get('baselineCharacteristicsModule', {}).get('measures', {})
+        # 'measures': row.get('resultsSection', {})\
+        #     .get('baselineCharacteristicsModule', {}).get('measures', {})
 }
         
         return fields
@@ -64,28 +55,98 @@ def filter_nas(value):
     except ValueError:
         return 0 
 
-def get_sex_counts(row):
-    counts = {}
-    total = 0
+def get_sex_counts(nct_id, row):
+    """TODO: Doc string"""
+    counts_dict = {'nct_id': nct_id, 'female': None, 'male': None, 'total': None}
 
-    for measure in row:
-        if measure.get('title', {}) == 'Sex: Female, Male' and measure.get('paramType', {}) == 'COUNT_OF_PARTICIPANTS':
+    measures = row.get('resultsSection', {})\
+            .get('baselineCharacteristicsModule', {}).get('measures', {})
 
-            for measure_class in measure.get('classes', {}):
+    for measure in measures:
+        if measure.get('title') == 'Sex: Female, Male' \
+            and measure.get('paramType') == 'COUNT_OF_PARTICIPANTS':
 
-                for category in measure_class.get('categories', {}):
+            for cls in measure.get('classes', {}):
+                for denom in cls.get('denoms', {}):
+                    counts_dict['total'] = denom.get('counts', {})[-1]['value']
 
-                    count = filter_nas(
-                        max(
-                            category['measurements'], \
-                                key=lambda count: filter_nas(count['value']))\
-                                    ['value']
-                        )
+            for category in cls.get('categories', {}):
+                if category['title'] == 'Female':
+                    counts_dict['female'] = \
+                        category.get('measurements', {})[-1]['value']
+                if category['title'] == 'Male':
+                    counts_dict['male'] = \
+                        category.get('measurements', {})[-1]['value']
+                    
+    return counts_dict
 
-    total += count
-    counts['title'] = total
+def get_race_counts(nct_id, row):
+    """TODO: Doc string"""
+    
+    race_dict = {'nct_id': nct_id,
+        'american_indian_or_alaska_native': None, 
+        'asian': None, 
+        'black': None, 
+        'hawaiian_or_pacific_islander': None, 
+        'white': None, 
+        'multiple': None, 
+        'hispanic_or_latino': None, 
+        'not_hispanic_or_latino': None,
+        'unknown': None}
 
-    return counts
+    measures = row.get('resultsSection', {})\
+            .get('baselineCharacteristicsModule', {}).get('measures', {})
+    for measure in measures:
+        if measure.get('title') in ('Race/Ethnicity, Customized', 'Race (NIH/OMB)') \
+            and measure.get('paramType') == 'COUNT_OF_PARTICIPANTS':
+            for cls in measure.get('classes', {}):
+                for cat in cls.get('categories', {}):
+                    if cat.get('title'):
+                        code = RECODE[cat.get('title')]
+                        race_dict[code] = cat.get('measurements')[-1]['value']
+    return race_dict
+
+def generate_sex_csv(filepath):
+    """
+    TODO: Doc string
+    """
+    sex_counts_final = {'nct_id': [], 'female': [], 'male': [], 'total': []}
+    loaded = json.load(open(filepath))
+
+    for row in loaded:
+        nct_id = extract_fields(row)['nct_id']
+        sex_counts = get_sex_counts(nct_id, row)
+    
+    for key in sex_counts.keys():
+        sex_counts_final[key].append(sex_counts[key])
+    
+    
+    df_of_dictionary = pd.DataFrame(sex_counts_final)
+    df_of_dictionary.to_csv(f'data/csvs/TRIAL_COUNTS_SEX.csv', index=None)
+    
+def generate_race_csv(filepath):
+    race_counts_final = {'nct_id': [],
+    'american_indian_or_alaska_native': [], 
+    'asian': [], 
+    'black': [], 
+    'hawaiian_or_pacific_islander': [], 
+    'white': [], 
+    'multiple': [], 
+    'hispanic_or_latino': [], 
+    'not_hispanic_or_latino': [],
+        'unknown': []}
+    
+    loaded = json.load(open(filepath))
+
+    for row in loaded:
+        nct_id = extract_fields(row)['nct_id']
+        race_counts = get_race_counts(nct_id, row)
+
+        for key in race_counts.keys():
+            race_counts_final[key].append(race_counts[key])
+    
+    df_of_dictionary = pd.DataFrame(race_counts_final)
+    df_of_dictionary.to_csv(f'data/csvs/TRIAL_COUNTS_RACE.csv', index=None)
 
 def generate_trial_csvs(filepath):
     """
@@ -96,43 +157,24 @@ def generate_trial_csvs(filepath):
     loaded = json.load(open(filepath))
 
     trial_dicts = {
-        'trials': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
-        'trial_status': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
-        'trial_locations': {'nct_id': [], 'locations': []},
-        'trial_interventions': {'nct_id': [], 'intervention_name': []},
-        'trial_conditions': {'nct_id': [], 'conditions': [], 'keywords': []},
-        'trial_counts_sex': {'nct_id': [], 'Female': [], 'Male': [], 'total': []}
+        'TRIALS': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
+        'TRIAL_STATUS': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
+        'TRIAL_LOCATIONS': {'nct_id': [], 'locations': []},
+        'TRIAL_INTERVENTIONS': {'nct_id': [], 'intervention_name': []},
+        'TRIAL_CONDITIONS': {'nct_id': [], 'conditions': [], 'keywords': []},
     }
 
-    # TODO: Is there a way to handle this more eloquently?
     for row in loaded:
 
-        # Extract all fields
         fields =  extract_fields(row)
 
         for dict_name, dictionary in trial_dicts.items():
-            if dict_name == 'trial_counts_sex':
-                dictionary['nct_id'] = fields['nct_id']
                 
-                if fields.get('measures', {}):
-                    measures = fields.get('measures', {})
-                    sex_counts = get_sex_counts(fields.get('measures', {}))
-                    
-                    for key in sex_counts.keys():
-                        dictionary[key].append(sex_counts[key])
-            
-            else:
                 for key in dictionary.keys():
                     dictionary[key].append(fields[key])
 
+        
+    for dict_name, dictionary in trial_dicts.items():
+        df_of_dictionary = pd.DataFrame(dictionary)
+        df_of_dictionary.to_csv(f'data/csvs/{dict_name}.csv', index=None)
 
-    # Create trials csvs
-                    
-        for dict_name, dictionary in trial_dicts.items():
-            print(f"Lengths in {dict_name}:")
-            for key, value in dictionary.items():
-                print(f"  {key}: {len(value)}")
-
-    # for dict_name, dictionary in trial_dicts.items():
-    #     df_of_dictionary = pd.DataFrame(dictionary)
-    #     df_of_dictionary.to_csv(f'data/{dict_name}.csv', index=None)
