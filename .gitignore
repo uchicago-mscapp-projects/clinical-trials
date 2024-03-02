@@ -6,3 +6,5 @@ api/data/.fda.json.icloud
 testing.ipynb
 .ipynb_checkpoints/
 .VSCodeCounter
+data/trials.db
+data/trials.db-journal
