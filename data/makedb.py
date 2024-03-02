@@ -45,13 +45,21 @@ def schema():
     , keywords
     );
 
-    CREATE TABLE TRIAL_COUNTS_RACE (
+    CREATE TABLE TRIAL_RACE (
     nct_id VARCHAR PRIMARY KEY
-    , race
+    , american_indian_or_alaska_native
+    , asian
+    , black
+    , hawaiian_or_pacific_islander
+    , white
+    , multiple
+    , hispanic_or_latino
+    , not_hispanic_or_latino
+    , unknown
     , total
     );
 
-    CREATE TABLE TRIAL_COUNTS_SEX (
+    CREATE TABLE TRIAL_SEX (
     nct_id VARCHAR PRIMARY KEY
     , female
     , male

@@ -1,10 +1,8 @@
 # TODO: Handle relative filepath
-import sqlite3
-import re
 import json
 import pandas as pd
-import csv
 from .recode import RECODED
+from .collapse_race_data import WHITE, BLACK, ASIAN, AI_AN, HI_PI, LATINO, NOT_LATINO, MUL, UNK
 
 def extract_fields(row):
         """
@@ -86,15 +84,15 @@ def extract_trial_race(nct_id, row):
     """TODO: Doc string"""
     
     race_dict = {'nct_id': nct_id,
-        'american_indian_or_alaska_native': None, 
-        'asian': None, 
-        'black': None, 
-        'hawaiian_or_pacific_islander': None, 
-        'white': None, 
-        'multiple': None, 
-        'hispanic_or_latino': None, 
-        'not_hispanic_or_latino': None,
-        'unknown': None}
+        AI_AN: None, 
+        ASIAN: None, 
+        BLACK: None, 
+        HI_PI: None, 
+        WHITE: None, 
+       MUL: None, 
+        LATINO: None, 
+        NOT_LATINO: None,
+       UNK: None}
 
     measures = row.get('resultsSection', {})\
             .get('baselineCharacteristicsModule', {}).get('measures', {})
@@ -105,7 +103,8 @@ def extract_trial_race(nct_id, row):
                 for cat in cls.get('categories', {}):
                     if cat.get('title'):
                         code = RECODED[cat.get('title')]
-                        race_dict[code] = cat.get('measurements')[-1]['value']
+                        if cat.get('measurements', []):
+                            race_dict[code] = cat.get('measurements')[-1]['value']
     return race_dict
 
 def generate_sex_csv(filepath):
@@ -123,19 +122,19 @@ def generate_sex_csv(filepath):
             sex_counts_final[key].append(sex_counts[key])
     
     df_of_dictionary = pd.DataFrame(sex_counts_final)
-    df_of_dictionary.to_csv(f'data/csvs/TRIAL_COUNTS_SEX.csv', index=None)
+    df_of_dictionary.to_csv(f'data/csvs/TRIAL_SEX.csv', index=None)
     
 def generate_race_csv(filepath):
     race_counts_final = {'nct_id': [],
-    'american_indian_or_alaska_native': [], 
-    'asian': [], 
-    'black': [], 
-    'hawaiian_or_pacific_islander': [], 
-    'white': [], 
-    'multiple': [], 
-    'hispanic_or_latino': [], 
-    'not_hispanic_or_latino': [],
-        'unknown': []}
+        AI_AN: [], 
+        ASIAN: [], 
+        BLACK: [], 
+        HI_PI: [], 
+        WHITE: [], 
+       MUL: [], 
+        LATINO: [], 
+        NOT_LATINO: [],
+       UNK: []}
     
     loaded = json.load(open(filepath))
 
@@ -147,7 +146,7 @@ def generate_race_csv(filepath):
             race_counts_final[key].append(race_counts[key])
     
     df_of_dictionary = pd.DataFrame(race_counts_final)
-    df_of_dictionary.to_csv(f'data/csvs/TRIAL_COUNTS_RACE.csv', index=None)
+    df_of_dictionary.to_csv(f'data/csvs/TRIAL_RACE.csv', index=None)
 
 def generate_trial_csvs(filepath):
     """
