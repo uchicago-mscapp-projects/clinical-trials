@@ -275,3 +275,8 @@ def generate_trial_csvs_func(filepath):
             ext_data.extend(extraction_func(fields))
         df = pd.DataFrame(ext_data)
         df.to_csv(f'data/csvs/{dict_name}.csv', index=None)
+
+if __name__ == "__main__":
+    # generate all five CSVs
+    generate_trial_csvs('data/trials.json')
+    generate_trial_csvs_func('data/trials.json')
