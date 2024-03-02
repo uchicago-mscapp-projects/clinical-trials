@@ -30,13 +30,13 @@ cursor = connection.cursor()
 
 # Define lists of possible treatments and of possible manufacturers
 # Pull interventions tested in at least 5 trials
-trials_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
+trts_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
         GROUP BY INTERVENTION_NAME HAVING count(*) >= 5"
-trt_list = pd.read_sql_query(trials_query, connection)
+trt_list = pd.read_sql_query(trts_query, connection)
 
 # Pull manufacturers who have sponsored at least 5 trials
-manu_query = "SELECT DISTINCT lead_sponsor FROM TRIALS \
-    GROUP BY lead_sponsor HAVING count(*) >= 5"
+manu_query = "SELECT DISTINCT sponsor_name FROM FDA_FULL \
+    GROUP BY sponsor_name HAVING count(*) >= 5"
 manu_list = pd.read_sql_query(manu_query, connection)
 
 
@@ -179,7 +179,7 @@ def update_options(search_value):
         )
 
 def update_output_generic(selected_trt):
-    query = "SELECT distinct TRIAL_INTERVENTIONS.generic_name \
+    query = "SELECT distinct TRIAL_INTERVENTIONS.intervention_name \
     FROM TRIAL_INTERVENTIONS \
     WHERE intervention_name = ?"    
 
@@ -197,9 +197,9 @@ def update_output_generic(selected_trt):
         )
 
 def update_output_brand(selected_trt):
-    query = "SELECT distinct TRIAL_INTERVENTIONS.brand_name \
-    FROM TRIAL_INTERVENTIONS \
-    WHERE intervention_name = ?"
+    query = "SELECT distinct FDA_FULL.brand_name \
+    FROM FDA_FULL \
+    WHERE generic_name = ?"
 
     brand_name = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -263,7 +263,6 @@ def update_output_conditions(selected_trt):
         )
 
 def update_stackedbar(selected_trt, selected_cond):
-    # make sure the like is case insensitive
     query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
     TRIAL_CONDITIONS.condition, \
 	SUM(TRIAL_RACE.asian) AS Asian, \
@@ -301,7 +300,7 @@ def update_stackedbar(selected_trt, selected_cond):
         Input(component_id="treatment-dropdown", component_property='value'),
         Input(component_id="conditions-dropdown", component_property='value'))
 def update_table_by_treatment(selected_trt, selected_cond):
-    query = "SELECT TRIAL_INTERVENTIONS.INTERVENTION, \
+    query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
     TRIAL_CONDITIONS.condition, \
 	SUM(TRIAL_RACE.asian) AS Asian, \
 	SUM(TRIAL_RACE.black) AS Black, \
@@ -376,10 +375,6 @@ def update_linegraph(selected_manu):
 	on TRIAL_RACE.nct_id = TRIALS.nct_id \
 	WHERE TRIALS.lead_sponsor LIKE ? \
 	GROUP BY TRIALS.lead_sponsor, YEAR(TRIAL_STATUS.start_date)"
-    # query = "SELECT TRIAL_RACE.RACE FROM TRIAL_RACE \
-    # INNER JOIN TRIALS \
-    # on TRIAL_RACE.nct_id = TRIALS.nct_id \
-    # WHERE TRIALS.lead_sponsor LIKE ? "
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_manu,))
