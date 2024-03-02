@@ -15,7 +15,7 @@ def schema():
     nct_id VARCHAR PRIMARY KEY
     , brief_title VARCHAR
     , official_title VARCHAR
-    , lead_sponsor
+    , lead_sponsor VARCHAR
     );
 
     CREATE TABLE TRIAL_STATUS (
@@ -23,7 +23,7 @@ def schema():
     , status_verified_date DATE
     , overall_status VARCHAR
     , start_date DATE
-    , completion_date
+    , completion_date DATE
     , last_known_status VARCHAR
     , why_stopped VARCHAR
     );
@@ -36,35 +36,47 @@ def schema():
 
     CREATE TABLE TRIAL_INTERVENTIONS (
     nct_id VARCHAR
-    , intervention_name
+    , intervention_name VARCHAR
     );
 
     CREATE TABLE TRIAL_CONDITIONS (
     nct_id VARCHAR
-    , condition
-    , keywords
+    , condition VARCHAR
+    , keywords VARCHAR
     );
 
     CREATE TABLE TRIAL_RACE (
     nct_id VARCHAR PRIMARY KEY
-    , american_indian_or_alaska_native
-    , asian
-    , black
-    , hawaiian_or_pacific_islander
-    , white
-    , multiple
-    , hispanic_or_latino
-    , not_hispanic_or_latino
-    , unknown
-    , total
+    , american_indian_or_alaska_native INTEGER
+    , asian INTEGER
+    , black INTEGER
+    , hawaiian_or_pacific_islander INTEGER
+    , white INTEGER
+    , multiple INTEGER
+    , hispanic_or_latino INTEGER
+    , not_hispanic_or_latino INTEGER
+    , unknown INTEGER
+    , total INTGER
     );
 
     CREATE TABLE TRIAL_SEX (
     nct_id VARCHAR PRIMARY KEY
-    , female
-    , male
-    , total
+    , female INTEGER
+    , male INTEGER
+    , total INTEGER
     );
+    
+    CREATE TABLE FDA_FULL (
+    application_number VARCHAR PRIMARY KEY
+   , submission_status_date VARCHAR
+   , submission_status VARCHAR
+   , brand_name VARCHAR
+   , sponsor_name VARCHAR
+   , substance_name VARCHAR
+   , generic_name VARCHAR
+   , manufacturer_name VARCHAR
+   );
+
     """
 
 def makedb():
