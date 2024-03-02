@@ -96,6 +96,12 @@ def makedb():
 
         df.to_sql(table_name, con=conn, if_exists='append', index=False)
     
+
+    #Read transformations SQL script
+    with open ('data/transformations.sql', 'r') as sql:
+        sql = sql.read()
+        c.executescript(sql)
+
     c.close()
 
 if __name__ == "__main__":
