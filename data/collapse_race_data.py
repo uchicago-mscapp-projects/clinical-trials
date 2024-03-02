@@ -5,8 +5,8 @@ import json
 WHITE = 'white'
 BLACK = 'black'
 ASIAN = 'asian'
-AI_AN = 'american_indian_or_alaska-native'
-HI_PI = 'hawaiian_or_pacific_slander'
+AI_AN = 'american_indian_or_alaska_native'
+HI_PI = 'hawaiian_or_pacific_islander'
 LATINO = 'hispanic_or_latino'
 NOT_LATINO = 'not_hispanic_or_latino'
 MUL = 'multiple'
@@ -82,3 +82,13 @@ def apply_recode(distinct_data, recode_all=False):
         
     return (recoding_dict, unmatched)
 
+def collapse_race_data(filepath, recode_all = False):
+    distinct = get_distinct_race_categories(filepath)
+    
+    recoded, unmatched = apply_recode(distinct, recode_all)
+
+    if recode_all:
+        return recoded
+    
+    else:
+        return(recoded, unmatched)

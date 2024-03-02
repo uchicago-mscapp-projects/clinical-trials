@@ -2,7 +2,7 @@ import sqlite3
 import pathlib
 import os.path
 import pandas as pd
-from . import load_trials_data
+from . import extract_trials_data
 
 #TODO: Handle pathing better
 # TODO: Group by for drug, condition, participant diversity counts
@@ -76,7 +76,7 @@ def makedb():
     c = conn.cursor()
     c.executescript(schema())
 
-    load_trials_data.generate_trial_csvs('data/trials.json')
+    extract_trials_data.generate_trial_csvs('data/trials.json')
 
     for file in os.listdir('data/csvs'):
         df = pd.read_csv(f'data/csvs/{file}')

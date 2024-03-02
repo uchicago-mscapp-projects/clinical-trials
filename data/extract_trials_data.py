@@ -2,7 +2,8 @@
 import json
 import pandas as pd
 from .recode import RECODED
-from .collapse_race_data import WHITE, BLACK, ASIAN, AI_AN, HI_PI, LATINO, NOT_LATINO, MUL, UNK
+from .collapse_race_data import collapse_race_data, \
+    WHITE, BLACK, ASIAN, AI_AN, HI_PI, LATINO, NOT_LATINO, MUL, UNK
 
 def extract_fields(row):
         """
@@ -80,7 +81,7 @@ def extract_trial_sex(nct_id, row):
                     
     return counts_dict
 
-def extract_trial_race(nct_id, row):
+def extract_trial_race(nct_id, row, recoded_data):
     """TODO: Doc string"""
     
     race_dict = {'nct_id': nct_id,
@@ -102,7 +103,7 @@ def extract_trial_race(nct_id, row):
             for cls in measure.get('classes', {}):
                 for cat in cls.get('categories', {}):
                     if cat.get('title'):
-                        code = RECODED[cat.get('title')]
+                        code = recoded_data[cat.get('title')]
                         if cat.get('measurements', []):
                             race_dict[code] = cat.get('measurements')[-1]['value']
     return race_dict
@@ -138,9 +139,11 @@ def generate_race_csv(filepath):
     
     loaded = json.load(open(filepath))
 
+    recoded_data = collapse_race_data('data/trials.json', recode_all=True)
+
     for row in loaded:
         nct_id = extract_fields(row)['nct_id']
-        race_counts = extract_trial_race(nct_id, row)
+        race_counts = extract_trial_race(nct_id, row, recoded_data)
 
         for key in race_counts.keys():
             race_counts_final[key].append(race_counts[key])
