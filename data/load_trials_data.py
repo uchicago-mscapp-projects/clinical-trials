@@ -4,7 +4,7 @@ import re
 import json
 import pandas as pd
 import csv
-from .recode import RECODE
+from .recode import RECODED
 
 def extract_fields(row):
         """
@@ -55,7 +55,7 @@ def filter_nas(value):
     except ValueError:
         return 0 
 
-def get_sex_counts(nct_id, row):
+def extract_trial_sex(nct_id, row):
     """TODO: Doc string"""
     counts_dict = {'nct_id': nct_id, 'female': None, 'male': None, 'total': None}
 
@@ -66,21 +66,23 @@ def get_sex_counts(nct_id, row):
         if measure.get('title') == 'Sex: Female, Male' \
             and measure.get('paramType') == 'COUNT_OF_PARTICIPANTS':
 
-            for cls in measure.get('classes', {}):
+            for cls in measure.get('classes', []):
                 for denom in cls.get('denoms', {}):
                     counts_dict['total'] = denom.get('counts', {})[-1]['value']
 
             for category in cls.get('categories', {}):
                 if category['title'] == 'Female':
-                    counts_dict['female'] = \
-                        category.get('measurements', {})[-1]['value']
+                    if category.get('measurements'):
+                        counts_dict['female'] = \
+                            category.get('measurements')[-1]['value']
                 if category['title'] == 'Male':
-                    counts_dict['male'] = \
-                        category.get('measurements', {})[-1]['value']
+                    if category.get('measurements'):
+                        counts_dict['male'] = \
+                            category.get('measurements')[-1]['value']
                     
     return counts_dict
 
-def get_race_counts(nct_id, row):
+def extract_trial_race(nct_id, row):
     """TODO: Doc string"""
     
     race_dict = {'nct_id': nct_id,
@@ -102,7 +104,7 @@ def get_race_counts(nct_id, row):
             for cls in measure.get('classes', {}):
                 for cat in cls.get('categories', {}):
                     if cat.get('title'):
-                        code = RECODE[cat.get('title')]
+                        code = RECODED[cat.get('title')]
                         race_dict[code] = cat.get('measurements')[-1]['value']
     return race_dict
 
@@ -115,11 +117,10 @@ def generate_sex_csv(filepath):
 
     for row in loaded:
         nct_id = extract_fields(row)['nct_id']
-        sex_counts = get_sex_counts(nct_id, row)
+        sex_counts = extract_trial_sex(nct_id, row)
     
-    for key in sex_counts.keys():
-        sex_counts_final[key].append(sex_counts[key])
-    
+        for key in sex_counts.keys():
+            sex_counts_final[key].append(sex_counts[key])
     
     df_of_dictionary = pd.DataFrame(sex_counts_final)
     df_of_dictionary.to_csv(f'data/csvs/TRIAL_COUNTS_SEX.csv', index=None)
@@ -140,7 +141,7 @@ def generate_race_csv(filepath):
 
     for row in loaded:
         nct_id = extract_fields(row)['nct_id']
-        race_counts = get_race_counts(nct_id, row)
+        race_counts = extract_trial_race(nct_id, row)
 
         for key in race_counts.keys():
             race_counts_final[key].append(race_counts[key])
@@ -280,3 +281,5 @@ if __name__ == "__main__":
     # generate all five CSVs
     generate_trial_csvs('data/trials.json')
     generate_trial_csvs_func('data/trials.json')
+    generate_race_csv('data/trials.json')
+    generate_sex_csv('data/trials.json')

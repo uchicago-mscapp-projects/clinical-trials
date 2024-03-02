@@ -29,29 +29,29 @@ def schema():
     );
 
     CREATE TABLE TRIAL_LOCATIONS (
-    nct_id VARCHAR PRIMARY KEY
+    nct_id VARCHAR
     , city VARCHAR
     , country VARCHAR
     );
 
     CREATE TABLE TRIAL_INTERVENTIONS (
-    nct_id VARCHAR PRIMARY KEY
+    nct_id VARCHAR
     , intervention_name
     );
 
     CREATE TABLE TRIAL_CONDITIONS (
-    nct_id VARCHAR PRIMARY KEY
+    nct_id VARCHAR
     , condition
-    , keyword
+    , keywords
     );
 
-    CREATE TABLE RACE_BY_TRIAL (
+    CREATE TABLE TRIAL_COUNTS_RACE (
     nct_id VARCHAR PRIMARY KEY
     , race
     , total
     );
 
-    CREATE TABLE SEX_BY_TRIAL (
+    CREATE TABLE TRIAL_COUNTS_SEX (
     nct_id VARCHAR PRIMARY KEY
     , female
     , male
