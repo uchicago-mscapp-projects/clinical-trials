@@ -159,22 +159,124 @@ def generate_trial_csvs(filepath):
     trial_dicts = {
         'TRIALS': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
         'TRIAL_STATUS': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
-        'TRIAL_LOCATIONS': {'nct_id': [], 'locations': []},
-        'TRIAL_INTERVENTIONS': {'nct_id': [], 'intervention_name': []},
-        'TRIAL_CONDITIONS': {'nct_id': [], 'conditions': [], 'keywords': []},
     }
 
     for row in loaded:
-
-        fields =  extract_fields(row)
+        fields = extract_fields(row)
 
         for dict_name, dictionary in trial_dicts.items():
-                
-                for key in dictionary.keys():
-                    dictionary[key].append(fields[key])
+            for key in dictionary.keys():
+                dictionary[key].append(fields[key])
 
-        
     for dict_name, dictionary in trial_dicts.items():
         df_of_dictionary = pd.DataFrame(dictionary)
         df_of_dictionary.to_csv(f'data/csvs/{dict_name}.csv', index=None)
 
+"""
+Explanation of below functions.
+
+- extract_interventions
+- extract_trial_locations
+- extract_trial_conditions
+- generate_trial_csvs_func
+
+A given 'row' represented by fields sometimes needs to turn into one
+output row, and sometimes many.
+
+You could write this as:
+
+output_rows = []
+for sub_type in fields[sub_field]:
+    output_rows.append({...})
+return output_rows
+
+Where, for example, in the case of locations, the {...}
+would be a {nct_id, city, country} dictionary.
+
+Then, in generate_trial_csvs_func
+we use "extend" instead of "append" to grow our list of
+results by as few as one (where output_rows would only be len==1 if a
+single location (or intervention, etc.) occurred.
+
+This is a very common pattern, and I am using generators to do it.
+A generator function essentially returns multiple values, so the
+code here is equivalent to building lists of output_rows and then
+returning them, except for simplicity's stake, I just yield
+them one at a time.
+
+The "extend" calls in generate_trial_csvs_func still work as they
+would have if lists were returned.
+"""
+
+
+def extract_interventions(fields):
+    """
+    Take a 'fields' object from extract_fields and build a
+    nct,intervention_name dictionary.
+    """
+    for intervention in fields["intervention_name"]:
+        yield {
+            "nct_id": fields["nct_id"],
+            "intervention_name": intervention["name"],
+        }
+
+def extract_trial_locations(fields):
+    """
+    Take a 'fields' object from extract_fields and build a
+    nct_id, city, country dictionary
+    """
+    for loc in fields["locations"]:
+        yield {
+            "nct_id": fields["nct_id"],
+            "city": loc["city"],
+            "country": loc["country"],
+        }
+
+def extract_trial_conditions(fields):
+    """
+    Take a 'fields' object from extract fields and build a
+    nct_id, condition, keywords dictionary
+    """
+    for cond in fields["conditions"]:
+        keywords_flat = " ".join(fields["keywords"] or [])
+        yield {
+            "nct_id": fields["nct_id"],
+            "condition": cond,
+            "keywords": keywords_flat,
+        }
+    # TODO: what do you want to do with keywords & conditions here?
+    # do you want one row for each condition and one row for each
+    # keyword?
+    # I wasn't sure, so for now I generate one row per condition
+    # and flatten keywords into a single row.
+    # You could change this, or let me know the intent and I can
+    # suggest the right path forward.
+
+def generate_trial_csvs_func(filepath):
+    """
+    Takes the filpath of the raw data JSON file, extracts fields,
+    and saves them to separate csvs for loading and manipulation.
+    """
+
+    loaded = json.load(open(filepath))
+
+    extraction_functions = {
+        "trial_interventions": extract_interventions,
+        "trial_locations": extract_trial_locations,
+        "trial_conditions": extract_trial_conditions,
+    }
+
+    for dict_name, extraction_func in extraction_functions.items():
+        ext_data = []
+        for row in loaded:
+            # API object 'row' -> nested dict 'fields'
+            fields = extract_fields(row)
+            # each fields object returns >=1 output row
+            ext_data.extend(extraction_func(fields))
+        df = pd.DataFrame(ext_data)
+        df.to_csv(f'data/csvs/{dict_name}.csv', index=None)
+
+if __name__ == "__main__":
+    # generate all five CSVs
+    generate_trial_csvs('data/trials.json')
+    generate_trial_csvs_func('data/trials.json')
