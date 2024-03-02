@@ -29,14 +29,15 @@ connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 
 # Define lists of possible treatments and of possible manufacturers
-trials_query = "SELECT DISTINCT intervention_name FROM TRIAL_INTERVENTIONS"
+# Pull interventions tested in at least 5 trials
+trials_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
+        GROUP BY INTERVENTION_NAME HAVING count(*) >= 5"
 trt_list = pd.read_sql_query(trials_query, connection)
-#trt_list = pd.read_sql_query("SELECT DISTINCT intervention FROM trials", connection)
-# trt_list = []
-# for i in data['generic_name']:
-#         trt_list.append(i)
 
-manu_list = pd.read_sql_query("SELECT DISTINCT lead_sponsor FROM TRIALS", connection)
+# Pull manufacturers who have sponsored at least 5 trials
+manu_query = "SELECT DISTINCT lead_sponsor FROM TRIALS \
+    GROUP BY lead_sponsor HAVING count(*) >= 5"
+manu_list = pd.read_sql_query(manu_query, connection)
 
 
 
@@ -180,11 +181,11 @@ def update_options(search_value):
 def update_output_generic(selected_trt):
     query = "SELECT distinct TRIAL_INTERVENTIONS.generic_name \
     FROM TRIAL_INTERVENTIONS \
-    WHERE INTERVENTION = ?"    
+    WHERE intervention_name = ?"    
 
     generic_name = pd.read_sql_query(sql = query, 
                       con = connection,
-                      params = (selected_trt))
+                      params = (selected_trt,))
 
     return "Generic name: {}".format(generic_name)
 
@@ -198,14 +199,11 @@ def update_output_generic(selected_trt):
 def update_output_brand(selected_trt):
     query = "SELECT distinct TRIAL_INTERVENTIONS.brand_name \
     FROM TRIAL_INTERVENTIONS \
-    WHERE INTERVENTION = ?"
-    # query = "SELECT distinct brand_name FROM trials WHERE generic_name = ?"
+    WHERE intervention_name = ?"
 
     brand_name = pd.read_sql_query(sql = query, 
                       con = connection,
-                      params = (selected_trt))
-    #row = data.loc[data['generic_name'] == selected_trt]
-    #brand_name = row['brand_name']
+                      params = (selected_trt,))
     
     return "Brand name(s): {}".format(brand_name)
 
@@ -216,18 +214,22 @@ def update_output_brand(selected_trt):
         Input(component_id="treatment-dropdown", component_property='value')
         )
 
+# Pull manufacturers who have sponsored at least 2 trials
 def update_output_manufacturer(selected_trt):
-    query = "SELECT distinct TRIALS.lead_sponsor \
-    FROM TRIAL_INTERVENTIONS \
-    INNER JOIN TRIALS \
+    query = "SELECT DISTINCT trials.lead_sponsor \
+    FROM TRIALS \
+    INNER JOIN TRIAL_INTERVENTIONS \
     ON TRIAL_INTERVENTIONS.nct_id = TRIALS.nct_id \
-    WHERE TRIAL_INTERVENTIONS.INTERVENTION = ?"
+    WHERE TRIAL_INTERVENTIONS.intervention_name  = ? \
+    GROUP BY TRIALS.lead_sponsor \
+    HAVING count(*) >=2"
     # query = "SELECT distinct manufacturer FROM trials WHERE generic_name = ?"
 
     manufacturer = pd.read_sql_query(sql = query, 
                       con = connection,
-                      params = (selected_trt))
-    return "Manufacturer: {}".format(manufacturer)
+                      params = (selected_trt,))
+
+    return "Manufacturer(s): {}".format(', '.join(manufacturer["lead_sponsor"]))
 
 
 # Callback function for pulling list of conditions for the treatment
@@ -240,16 +242,16 @@ def update_output_manufacturer(selected_trt):
         )
 
 def update_output_conditions(selected_trt):
-    query = "SELECT distinct TRIAL_CONDITIONS.CONDITION \
-    FROM TRIAL_INTERVENTIONS \
-    INNER JOIN TRIAL_CONDITIONS \
-    ON TRIAL_INTERVENTIONS.nct_id = TRIAL_CONDITIONS.nct_id \
-    WHERE TRIAL_INTERVENTIONS.INTERVENTION = ?"
+    query = "SELECT distinct TRIAL_CONDITIONS.condition \
+    FROM TRIAL_CONDITIONS \
+    INNER JOIN TRIAL_INTERVENTIONS \
+    ON TRIAL_CONDITIONS.nct_id = TRIAL_INTERVENTIONS.nct_id \
+    WHERE TRIAL_INTERVENTIONS.intervention_name = ?"
     # query = "SELECT distinct conditions FROM trial_conditions WHERE generic_name = ?"
 
     conditions = pd.read_sql_query(sql = query, 
                       con = connection,
-                      params = (selected_trt))
+                      params = (selected_trt,))
     return conditions
 
 
@@ -262,41 +264,33 @@ def update_output_conditions(selected_trt):
 
 def update_stackedbar(selected_trt, selected_cond):
     # make sure the like is case insensitive
-    query = "SELECT TRIAL_INTERVENTIONS.INTERVENTION, \
+    query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
     TRIAL_CONDITIONS.condition, \
-	SUM(RACE_BY_TRIAL.asian) AS Asian, \
-	SUM(RACE_BY_TRIAL.black) AS Black, \
-	SUM(RACE_BY_TRIAL.white) AS White, \
-	SUM(RACE_BY_TRIAL.hispanic_or_latino) AS Hispanic, \
-    SUM(RACE_BY_TRIAL.american_indian_or_alaska_native + \
-        RACE_BY_TRIAL.hawaiian_or_pacific_islander + \
-        RACE_BY_TRIAL.multiple + RACE_BY_TRIAL.unknown) AS Other,\
-	SUM(RACE_BY_TRIAL.american_indian_or_alaska_native) AS AIAN, \
-	SUM(RACE_BY_TRIAL.hawaiian_or_pacific_islander) AS HPI, \
-	SUM(RACE_BY_TRIAL.multiple) AS multi_race, \
-	SUM(RACE_BY_TRIAL.unknown) AS unknown, \
-	SUM(RACE_BY_TRIAL.total) AS total \
-	FROM RACE_BY_TRIAL INNER JOIN TRIAL_INTERVENTIONS \
-	on TRIALS.nct_id = TRIAL_INTERVENTIONS.nct_id \
+	SUM(TRIAL_RACE.asian) AS Asian, \
+	SUM(TRIAL_RACE.black) AS Black, \
+	SUM(TRIAL_RACE.white) AS White, \
+	SUM(TRIAL_RACE.hispanic_or_latino) AS Hispanic, \
+    SUM(TRIAL_RACE.american_indian_or_alaska_native + \
+        TRIAL_RACE.hawaiian_or_pacific_islander + \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown) AS Other,\
+	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
+	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
+	SUM(TRIAL_RACE.multiple) AS multi_race, \
+	SUM(TRIAL_RACE.unknown) AS unknown, \
+	SUM(TRIAL_RACE.total) AS total \
+	FROM TRIAL_RACE INNER JOIN TRIAL_INTERVENTIONS \
+	on TRIAL_RACE.nct_id = TRIAL_INTERVENTIONS.nct_id \
 	INNER JOIN TRIAL_CONDITIONS \
-	on RACE_BY_TRIAL.nct_id = TRIAL_CONDITIONS.nct_id \
-	WHERE TRIAL_INTERVENTIONS.INTERVENTION LIKE ? \
+	on TRIAL_RACE.nct_id = TRIAL_CONDITIONS.nct_id \
+	WHERE TRIAL_INTERVENTIONS.intervention_name LIKE ? \
 	AND TRIAL_CONDITIONS.CONDITION LIKE ? \
-	GROUP BY TRIAL_INTERVENTIONS.INTERVENTION, TRIAL_CONDITIONS.condition"
-
-    # query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
-    # INNER JOIN TRIAL_INTERVENTIONS \
-    # on TRIALS.nct_id = TRIAL_INTERVENTIONS.nct_id \
-    # INNER JOIN TRIAL_CONDITIONS \
-    # on RACE_BY_TRIAL.nct_id = TRIAL_CONDITIONS.nct_id \
-    # WHERE TRIAL_INTERVENTIONS.INTERVENTION LIKE ? \
-    # AND TRIAL_CONDITIONS.CONDITION LIKE ?"
+	GROUP BY TRIAL_INTERVENTIONS.intervention_name, TRIAL_CONDITIONS.condition"
 
     trt_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_trt, selected_cond))
 
-    fig = by_drug(trt_trials)
+    fig = by_drug(trt_trials, selected_trt, selected_cond)
 
     return fig
 
@@ -309,32 +303,33 @@ def update_stackedbar(selected_trt, selected_cond):
 def update_table_by_treatment(selected_trt, selected_cond):
     query = "SELECT TRIAL_INTERVENTIONS.INTERVENTION, \
     TRIAL_CONDITIONS.condition, \
-	SUM(RACE_BY_TRIAL.asian) AS Asian, \
-	SUM(RACE_BY_TRIAL.black) AS Black, \
-	SUM(RACE_BY_TRIAL.white) AS White, \
-	SUM(RACE_BY_TRIAL.hispanic_or_latino) AS Hispanic, \
-    SUM(RACE_BY_TRIAL.american_indian_or_alaska_native + \
-        RACE_BY_TRIAL.hawaiian_or_pacific_islander + \
-        RACE_BY_TRIAL.multiple + RACE_BY_TRIAL.unknown) AS Other,\
-	SUM(RACE_BY_TRIAL.american_indian_or_alaska_native) AS AIAN, \
-	SUM(RACE_BY_TRIAL.hawaiian_or_pacific_islander) AS HPI, \
-	SUM(RACE_BY_TRIAL.multiple) AS multi_race, \
-	SUM(RACE_BY_TRIAL.unknown) AS unknown, \
-	SUM(RACE_BY_TRIAL.total) AS total \
-	FROM RACE_BY_TRIAL INNER JOIN TRIAL_INTERVENTIONS \
-	on TRIALS.nct_id = TRIAL_INTERVENTIONS.nct_id \
+	SUM(TRIAL_RACE.asian) AS Asian, \
+	SUM(TRIAL_RACE.black) AS Black, \
+	SUM(TRIAL_RACE.white) AS White, \
+	SUM(TRIAL_RACE.hispanic_or_latino) AS Hispanic, \
+    SUM(TRIAL_RACE.american_indian_or_alaska_native + \
+        TRIAL_RACE.hawaiian_or_pacific_islander + \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown) AS Other,\
+	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
+	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
+	SUM(TRIAL_RACE.multiple) AS multi_race, \
+	SUM(TRIAL_RACE.unknown) AS unknown, \
+	SUM(TRIAL_RACE.total) AS total \
+	FROM TRIAL_RACE INNER JOIN TRIAL_INTERVENTIONS \
+	on TRIAL_RACE.nct_id = TRIAL_INTERVENTIONS.nct_id \
 	INNER JOIN TRIAL_CONDITIONS \
-	on RACE_BY_TRIAL.nct_id = TRIAL_CONDITIONS.nct_id \
-	WHERE TRIAL_INTERVENTIONS.INTERVENTION LIKE ? \
+	on TRIAL_RACE.nct_id = TRIAL_CONDITIONS.nct_id \
+	WHERE TRIAL_INTERVENTIONS.intervention_name LIKE ? \
 	AND TRIAL_CONDITIONS.CONDITION LIKE ? \
-	GROUP BY TRIAL_INTERVENTIONS.INTERVENTION, TRIAL_CONDITIONS.condition"
+	GROUP BY TRIAL_INTERVENTIONS.intervention_name, TRIAL_CONDITIONS.condition"
     # query = "SELECT * FROM trials WHERE generic_name = ? AND condition = ?"
 
     trt_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_trt, selected_cond))
-    
-    table_by_drug = summary_statistics_table(trt_trials)
+
+    table_by_drug = summary_statistics_table(trt_trials, \
+                                    selected_trt, selected_cond)
 
     title_first_part = 'Racial Diversity in Clinical Trials Conducted for '
     title_second_part = ' in '
@@ -363,31 +358,31 @@ def update_options(search_value):
 def update_linegraph(selected_manu):
     query = "SELECT TRIALS.lead_sponsor as Manufacturer, \
     YEAR(TRIAL_STATUS.start_date) as Year, \
-	SUM(RACE_BY_TRIAL.asian) AS Asian, \
-	SUM(RACE_BY_TRIAL.black) AS Black, \
-	SUM(RACE_BY_TRIAL.white) AS White, \
-	SUM(RACE_BY_TRIAL.hispanic_or_latino) AS Hispanic, \
-    SUM(RACE_BY_TRIAL.american_indian_or_alaska_native + \
-        RACE_BY_TRIAL.hawaiian_or_pacific_islander + \
-        RACE_BY_TRIAL.multiple + RACE_BY_TRIAL.unknown) AS Other,\
-	SUM(RACE_BY_TRIAL.american_indian_or_alaska_native) AS AIAN, \
-	SUM(RACE_BY_TRIAL.hawaiian_or_pacific_islander) AS HPI, \
-	SUM(RACE_BY_TRIAL.multiple) AS multi_race, \
-	SUM(RACE_BY_TRIAL.unknown) AS unknown, \
-	SUM(RACE_BY_TRIAL.total) AS total \
-	FROM RACE_BY_TRIAL INNER JOIN TRIALS \
-	on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
+	SUM(TRIAL_RACE.asian) AS Asian, \
+	SUM(TRIAL_RACE.black) AS Black, \
+	SUM(TRIAL_RACE.white) AS White, \
+	SUM(TRIAL_RACE.hispanic_or_latino) AS Hispanic, \
+    SUM(TRIAL_RACE.american_indian_or_alaska_native + \
+        TRIAL_RACE.hawaiian_or_pacific_islander + \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown) AS Other,\
+	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
+	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
+	SUM(TRIAL_RACE.multiple) AS multi_race, \
+	SUM(TRIAL_RACE.unknown) AS unknown, \
+	SUM(TRIAL_RACE.total) AS total \
+	FROM TRIAL_RACE INNER JOIN TRIALS \
+	on TRIAL_RACE.nct_id = TRIALS.nct_id \
     INNER JOIN TRIAL_STATUS \
-	on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
+	on TRIAL_RACE.nct_id = TRIALS.nct_id \
 	WHERE TRIALS.lead_sponsor LIKE ? \
 	GROUP BY TRIALS.lead_sponsor, YEAR(TRIAL_STATUS.start_date)"
-    # query = "SELECT RACE_BY_TRIAL.RACE FROM RACE_BY_TRIAL \
+    # query = "SELECT TRIAL_RACE.RACE FROM TRIAL_RACE \
     # INNER JOIN TRIALS \
-    # on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
+    # on TRIAL_RACE.nct_id = TRIALS.nct_id \
     # WHERE TRIALS.lead_sponsor LIKE ? "
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
-                      params = (selected_manu))
+                      params = (selected_manu,))
 
     fig = by_manufacturer(manu_trials)
 
@@ -400,29 +395,29 @@ def update_linegraph(selected_manu):
         Input(component_id="manufacturer-dropdown", component_property='value'))
 def update_table_by_manufacturer(selected_manu):
     query = "SELECT TRIALS.lead_sponsor as Manufacturer, \
-	SUM(RACE_BY_TRIAL.asian) AS Asian, \
-	SUM(RACE_BY_TRIAL.black) AS Black, \
-	SUM(RACE_BY_TRIAL.white) AS White, \
-	SUM(RACE_BY_TRIAL.hispanic_or_latino) AS Hispanic, \
-    SUM(RACE_BY_TRIAL.american_indian_or_alaska_native + \
-        RACE_BY_TRIAL.hawaiian_or_pacific_islander + \
-        RACE_BY_TRIAL.multiple + RACE_BY_TRIAL.unknown) AS Other,\
-	SUM(RACE_BY_TRIAL.american_indian_or_alaska_native) AS AIAN, \
-	SUM(RACE_BY_TRIAL.hawaiian_or_pacific_islander) AS HPI, \
-	SUM(RACE_BY_TRIAL.multiple) AS multi_race, \
-	SUM(RACE_BY_TRIAL.unknown) AS unknown, \
-	SUM(RACE_BY_TRIAL.total) AS total \
-	FROM RACE_BY_TRIAL INNER JOIN TRIALS \
-	on RACE_BY_TRIAL.nct_id = TRIALS.nct_id \
+	SUM(TRIAL_RACE.asian) AS Asian, \
+	SUM(TRIAL_RACE.black) AS Black, \
+	SUM(TRIAL_RACE.white) AS White, \
+	SUM(TRIAL_RACE.hispanic_or_latino) AS Hispanic, \
+    SUM(TRIAL_RACE.american_indian_or_alaska_native + \
+        TRIAL_RACE.hawaiian_or_pacific_islander + \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown) AS Other,\
+	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
+	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
+	SUM(TRIAL_RACE.multiple) AS multi_race, \
+	SUM(TRIAL_RACE.unknown) AS unknown, \
+	SUM(TRIAL_RACE.total) AS total \
+	FROM TRIAL_RACE INNER JOIN TRIALS \
+	on TRIAL_RACE.nct_id = TRIALS.nct_id \
 	WHERE TRIALS.lead_sponsor LIKE ? \
 	GROUP BY TRIALS.lead_sponsor"
     # query = "SELECT * FROM trials WHERE manufacturer = ?"
 
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
-                      params = (selected_manu))
+                      params = (selected_manu,))
     
-    table_by_manu = summary_statistics_manuf_table(manu_trials)
+    table_by_manu = summary_statistics_manuf_table(manu_trials, selected_manu)
 
     title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By Manufacturers for '
 
