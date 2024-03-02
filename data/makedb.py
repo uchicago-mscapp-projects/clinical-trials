@@ -11,14 +11,14 @@ from . import extract_trials_data
 # Code adapted from PA3
 def schema():
     return """
-    CREATE TABLE TRIALS (
+    CREATE TABLE trials (
     nct_id VARCHAR PRIMARY KEY
     , brief_title VARCHAR
     , official_title VARCHAR
     , lead_sponsor VARCHAR
     );
 
-    CREATE TABLE TRIAL_STATUS (
+    CREATE TABLE trial_status (
     nct_id VARCHAR PRIMARY KEY
     , status_verified_date DATE
     , overall_status VARCHAR
@@ -28,24 +28,24 @@ def schema():
     , why_stopped VARCHAR
     );
 
-    CREATE TABLE TRIAL_LOCATIONS (
+    CREATE TABLE trial_locations (
     nct_id VARCHAR
     , city VARCHAR
     , country VARCHAR
     );
 
-    CREATE TABLE TRIAL_INTERVENTIONS (
+    CREATE TABLE trial_interventions (
     nct_id VARCHAR
     , intervention_name VARCHAR
     );
 
-    CREATE TABLE TRIAL_CONDITIONS (
+    CREATE TABLE trial_conditions (
     nct_id VARCHAR
     , condition VARCHAR
     , keywords VARCHAR
     );
 
-    CREATE TABLE TRIAL_RACE (
+    CREATE TABLE trial_race (
     nct_id VARCHAR PRIMARY KEY
     , american_indian_or_alaska_native INTEGER
     , asian INTEGER
@@ -59,14 +59,14 @@ def schema():
     , total INTGER
     );
 
-    CREATE TABLE TRIAL_SEX (
+    CREATE TABLE trial_sex (
     nct_id VARCHAR PRIMARY KEY
     , female INTEGER
     , male INTEGER
     , total INTEGER
     );
     
-    CREATE TABLE FDA_FULL (
+    CREATE TABLE fda_full (
     application_number VARCHAR PRIMARY KEY
    , submission_status_date VARCHAR
    , submission_status VARCHAR
@@ -86,15 +86,14 @@ def makedb():
 
     conn = sqlite3.connect(path)
     c = conn.cursor()
-    c.executescript(schema())
 
-    extract_trials_data.generate_trial_csvs('data/trials.json')
+    extract_trials_data.generate_trial_csvs_func('data/trials.json')
 
     for file in os.listdir('data/csvs'):
         df = pd.read_csv(f'data/csvs/{file}')
         table_name = file.split('.')[0]
 
-        df.to_sql(table_name, con=conn, if_exists='append', index=False)
+        df.to_sql(table_name, con=conn, if_exists='replace', index=False)
     
 
     #Read transformations SQL script

@@ -123,7 +123,7 @@ def generate_sex_csv(filepath):
             sex_counts_final[key].append(sex_counts[key])
     
     df_of_dictionary = pd.DataFrame(sex_counts_final)
-    df_of_dictionary.to_csv(f'data/csvs/TRIAL_SEX.csv', index=None)
+    df_of_dictionary.to_csv(f'data/csvs/trial_sex.csv', index=None)
     
 def generate_race_csv(filepath):
     race_counts_final = {'nct_id': [],
@@ -149,7 +149,7 @@ def generate_race_csv(filepath):
             race_counts_final[key].append(race_counts[key])
     
     df_of_dictionary = pd.DataFrame(race_counts_final)
-    df_of_dictionary.to_csv(f'data/csvs/TRIAL_RACE.csv', index=None)
+    df_of_dictionary.to_csv(f'data/csvs/trial_race.csv', index=None)
 
 def generate_trial_csvs(filepath):
     """
@@ -160,8 +160,8 @@ def generate_trial_csvs(filepath):
     loaded = json.load(open(filepath))
 
     trial_dicts = {
-        'TRIALS': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
-        'TRIAL_STATUS': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
+        'trial_status': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
+        'trial_status': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
     }
 
     for row in loaded:
@@ -283,5 +283,3 @@ if __name__ == "__main__":
     # generate all five CSVs
     generate_trial_csvs('data/trials.json')
     generate_trial_csvs_func('data/trials.json')
-    generate_race_csv('data/trials.json')
-    generate_sex_csv('data/trials.json')
