@@ -29,7 +29,7 @@ connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 
 # Define lists of possible treatments and of possible manufacturers
-trials_query = "SELECT DISTINCT INTERVENTION FROM TRIAL_INTERVENTIONS"
+trials_query = "SELECT DISTINCT intervention_name FROM TRIAL_INTERVENTIONS"
 trt_list = pd.read_sql_query(trials_query, connection)
 #trt_list = pd.read_sql_query("SELECT DISTINCT intervention FROM trials", connection)
 # trt_list = []
