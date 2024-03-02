@@ -7,15 +7,16 @@ import os.path
 
 import sqlite3
 import re
-import pandas as pd
+
 
 def load_data(filepath):
     """
-    Loads returned trials data into a pandas dataframe
+    Cleans returned trials data.
+    filepath = 'data/fda.json'
     """
 
     # Load as a series to handle nested data
-    with open('data/fda.json') as json_file:
+    with open(filepath) as json_file:
         data = json.load(json_file)
     results_list_of_dct = []
     for i in range(len(data)):
@@ -54,36 +55,14 @@ def load_data(filepath):
                    'brand_name','sponsor_name','generic_name','substance_name','manufacturer_name']
             for var in var_lst:
                 drug_dct[var] = locals()[var]
+            for key in dct:
+                if dct[key] == {}:
+                    dct[key] == None
             results_list_of_dct.append(drug_dct)
     return results_list_of_dct
-
     
 
-                
-
-    
-    # from_file = pd.read_json(filepath, typ='series')
-
-    # df = pd.json_normalize(from_file)
-    # df['new_results'] = df['results'][0]
-
-def generate_trials_data(raw_df, module):
-    """
-    Takes raw data dataframe and groups it into separate tables
-    to be loaded to the sqlite3 schema
-    """
-
-    columns = raw_df.columns.values.tolist()
-
-    if re.search('identificationModule', module):
-        module_cols = []
-    
-    # Add the unique key if not present in specified module
-    else:
-        module_cols = ['protocolSection.identificationModule.nctId']
-    
-    for column in columns:
-        if re.search(module, column):
-            module_cols.append(column)
-    
-    return raw_df.filter(module_cols, axis=1)
+def get_to_csv(filepath,filename):
+    data = load_data(filepath)
+    df = pd.DataFrame.from_dict(data)
+    df.to_csv(filename, sep=',', index=False, encoding='utf-8')
