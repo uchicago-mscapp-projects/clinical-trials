@@ -1,1 +1,3 @@
 # clinical-trial
+
+## NEED TO HAVE A VERSION OF PYTHON LESS THAN 3.12 INSTALLED -- preferably 3.11

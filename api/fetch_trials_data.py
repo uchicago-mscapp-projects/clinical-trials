@@ -9,6 +9,12 @@ import os.path
 
 API_URL = 'https://www.clinicaltrials.gov/api/v2/studies'
 
+API_FIELDS = ['NCTId', 'BriefTitle', 'OfficialTitle', 'Condition',
+              'StatusModule', 'InterventionName', 'InterventionOtherName', 
+              'Phase', 'BriefSummary', 'Keyword', 'ArmGroupLabel', 
+              'InterventionDescription', 'ArmGroupDescription',
+              'LeadSponsorName', 'LocationCity', 'LocationCountry', 
+              'StudyType', 'BaselineCharacteristicsModule']
 
 def make_trials_api_call(
     fields, limit_per_call,
@@ -50,24 +56,22 @@ def write_data(data, source, append=True):
         wrather than overwrite it.
 
     Returns:
-        Creates or appends to the file specified.
+        None. Creates or appends to the file specified.
     """
+
     if append:
         mode = 'a'
     else:
         mode = 'w'
 
     filename = os.path.join('./data', source + '.json')
+
     with open(filename, mode=mode) as f:
         f.write(json.dumps(data))
 
 
 def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
-                     fields=['NCTId', 'BriefTitle', 'OfficialTitle','Condition',
-'StatusModule', 'InterventionName', 'InterventionOtherName', 'Phase', 'BriefSummary', 'Keyword',
-'ArmGroupLabel', 'InterventionDescription', 'ArmGroupDescription',
-'LeadSponsorName', 'LocationCity', 'LocationCountry', 'StudyType', 'BaselineCharacteristicsModule'
-]):
+                     fields=API_FIELDS):
 
     """
     Pulls trials data, and writes it to a JSON file.
@@ -83,6 +87,7 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
 
     # Make initial API call, grab next page token to handle in for loop
     results = []
+
     response = make_trials_api_call(
         limit_per_call=limit_per_call, fields=fields).json()
 
@@ -98,7 +103,7 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
         try: 
             next_results = count_results + limit_per_call
 
-            print(f"Making API call for records {count_results} through {next_results}")
+            print(f"Pulling records {count_results} to {next_results}")
 
             response = make_trials_api_call(limit_per_call=limit_per_call,
                 fields=fields, pageToken=next_page_token).json()
