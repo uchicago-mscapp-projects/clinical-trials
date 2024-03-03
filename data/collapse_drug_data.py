@@ -22,13 +22,15 @@ def create_canonical_drugs(fda_filename):
     fda_canonical.to_csv('data/csvs/canonical_drugs.csv', columns=['brand_name'], 
                          index=False)
 
-def get_probable_matches(canonical_drugs, interventions_filename, tolerance=.85, block_on_first_letter=True):
+def get_probable_matches(canonical_drugs, interventions_filename, tolerance=.85):
     """
     Loads a csv of fda data containing drug names, and clincal trials data
     containing intervention names, and attempts to fuzzy match them
     using the jaro-winkler similarity score.
 
-    -- Args:
+    Args:
+    -- canonical drugs (csv): A deduped csv file of canonical drugs
+    --
     """
     ivs = pd.read_csv(interventions_filename)
 
@@ -37,17 +39,13 @@ def get_probable_matches(canonical_drugs, interventions_filename, tolerance=.85,
     drugs = {}
     for i_drug in ivs_unique:
         for f_drug in canonical_drugs:
-            if block_on_first_letter:
+                # Block on the first letter to speed up computation
                 if i_drug.startswith(f_drug[0]):
                     sim_score = jellyfish.jaro_similarity(f_drug, i_drug)
                     if sim_score >= tolerance:
                         drugs[i_drug] = f_drug
                         break
-            else:
-                sim_score = jellyfish.jaro_similarity(f_drug, i_drug)
-                if sim_score >= tolerance:
-                    drugs[i_drug] = f_drug
-                    break
+
     return drugs
 
 

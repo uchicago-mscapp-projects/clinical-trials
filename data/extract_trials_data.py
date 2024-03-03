@@ -27,9 +27,9 @@ def extract_fields(row):
 
         'overall_status': status_module.get('overallStatus', None),
 
-        'start_date': status_module.get('startDate', None),
+        'start_date': status_module.get('startDateStruct', {}).get('date', None),
 
-        'completion_date': status_module.get('completionDate', None),
+        'completion_date': status_module.get('primaryCompletionDateStruct', {}).get('date', None),
 
         'why_stopped': status_module.get('whyStopped', None),
 
@@ -48,12 +48,6 @@ def extract_fields(row):
 }
         
         return fields
-
-def filter_nas(value):
-    try:
-        return(int(value))
-    except ValueError:
-        return 0 
 
 def extract_trial_sex(nct_id, row):
     """
@@ -152,16 +146,8 @@ def generate_race_csv(filepath):
     """
     Generates a csv of extracted race data from the Clinical Trials API.
     """
-    race_counts_final = {'nct_id': [],
-        AI_AN: [], 
-        ASIAN: [], 
-        BLACK: [], 
-        HI_PI: [], 
-        WHITE: [], 
-       MUL: [], 
-        LATINO: [], 
-        NOT_LATINO: [],
-       UNK: []}
+    race_counts_final = {'nct_id': [], AI_AN: [], ASIAN: [], BLACK: [], 
+        HI_PI: [], WHITE: [], MUL: [], LATINO: [], NOT_LATINO: [], UNK: []}
     
     loaded = json.load(open(filepath))
 
@@ -186,7 +172,7 @@ def generate_trial_csvs(filepath):
     loaded = json.load(open(filepath))
 
     trial_dicts = {
-        'trial_status': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
+        'trials': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
         'trial_status': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
     }
 
