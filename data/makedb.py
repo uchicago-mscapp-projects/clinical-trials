@@ -9,7 +9,9 @@ FILES = [
     'trial_interventions.csv',
     'trial_locations.csv',
     'trial_race.csv',
-    'trial_sex.csv'
+    'trial_sex.csv',
+    'trial_status.csv',
+    'trials.csv'
 ]
 
 #TODO: Handle pathing better
