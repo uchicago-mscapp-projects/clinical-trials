@@ -23,7 +23,7 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
     plt.bar(data_drug['intervention_name'], data_drug['Asian'], color = 'yellow', label= 'Asian')
     plt.bar(data_drug['intervention_name'], data_drug['Hispanic'], color = 'green', label= 'Hispanic')
     plt.bar(data_drug['intervention_name'], data_drug['Other'], color = 'blue', label= 'Other')
-    
+
     plt.xlabel('Treatment Intervention')
     plt.ylabel('Number of Participants')
     
@@ -53,16 +53,17 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
     Summary Statistics table of race/ethnicity breakdown of clinical
     trials.
     '''
+    data_drug = data_drug[["Asian", "Black", "White", "Hispanic", "Other"]] # DS added
     perc_participants_by_drug = {}
     ave_participants_by_drug_each_race = {}
     iqr_by_drug = {}
     na_drug = {}
 
-    total_participants_by_drug = data_drug.sum()
-    max_participants_by_drug = data_drug.max()
-    min_participants_by_drug = data_drug.min()
-    ave_participants_by_drug = data_drug.mean()
-    median_participants_by_drug = data_drug.median()
+    total_participants_by_drug = data_drug.sum(axis = 1)
+    max_participants_by_drug = data_drug.max(axis = 1)
+    min_participants_by_drug = data_drug.min(axis = 1)
+    ave_participants_by_drug = data_drug.mean(axis = 1)
+    median_participants_by_drug = data_drug.median(axis = 1)
     range_participants_by_drug = max_participants_by_drug - min_participants_by_drug
 
     white_perc_drug = (data_drug['White'] / 
@@ -192,9 +193,6 @@ def by_manufacturer(data_manuf):
     plt.grid(True)
     plt.show()
 
-manuf_for_analysis = 'X Manufacturer'
-by_manufacturer(manuf_for_analysis)
-
 
 # Racial Diversity in Clinical Trials Conducted By Manufacturers: Data Analysis
 def summary_statistics_manuf_table(data_manuf, manufacturer):
@@ -202,16 +200,17 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
     Summary Statistics table of race/ethnicity breakdown of clinical
     trials.
     '''
+    data_manuf = data_manuf[["Asian", "Black", "White", "Hispanic", "Other"]] # DS added
     perc_participants_by_manufacturer = {}
     ave_participants_by_manufacturer_each_race = {}
     iqr_by_manufacturer = {}
     na_manufacturer = {}
 
-    total_participants_by_manufacturer = data_manuf.sum()
-    max_participants_by_manufacturer = data_manuf.max()
-    min_participants_by_manufacturer = data_manuf.min()
-    ave_participants_by_manufacturer = data_manuf.mean()
-    median_participants_by_manufacturer = data_manuf.median()
+    total_participants_by_manufacturer = data_manuf.sum(axis = 1)
+    max_participants_by_manufacturer = data_manuf.max(axis = 1)
+    min_participants_by_manufacturer = data_manuf.min(axis = 1)
+    ave_participants_by_manufacturer = data_manuf.mean(axis = 1)
+    median_participants_by_manufacturer = data_manuf.median(axis = 1)
     range_participants_by_manufacturer = max_participants_by_manufacturer - min_participants_by_manufacturer
 
     white_perc_manuf = (data_manuf['White'] / 
