@@ -8,5 +8,3 @@ testing.ipynb
 .VSCodeCounter
 data/trials.db
 data/trials.db-journal
-dedupe_dataframe_learned_settings
-dedupe_dataframe_training.json
