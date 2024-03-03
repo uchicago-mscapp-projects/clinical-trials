@@ -15,8 +15,12 @@ UNK = 'unknown'
 def get_distinct_race_categories(filepath):
     """
     Finds distinct values for race used in the returned CDC trial data.
-    Not called in the final app, but used in the process of development
-    to generate the dictionary in recode.py
+
+    Args:
+    -- filepath (str): The filepath of the json file returned by the API
+
+    Returns:
+        list: Distinct values for race in the json file
     """
     distinct = []
     loaded = json.load(open(filepath))
@@ -33,27 +37,22 @@ def get_distinct_race_categories(filepath):
                             distinct.append(cat.get('title'))
     return distinct
 
-def apply_recode(distinct_data, recode_all=False):
+def collapse_race_data(filepath, recode_all=False):
     """
     Attempts to apply recoded values based on return distinct fields.
-    If recode_all is set to true, applies 'unknown' to all fields it was unable to match
+    If recode_all is set to true, applies 'unknown' to all fields it was unable to match.
 
-    Returns: Dict of applied, list of keys unapplied.
-
-
+    Returns: Dict of applied fields, list of keys of fields that were unmatched.
     """
+
     recoding_dict = {}
     unmatched = []
-    search_patterns = {'white|caucasian|middle east|north africa': WHITE, 
-                       'black|african': BLACK,
-                       'hawaiian': HI_PI,
-                       'latin|hispanic|mexican': LATINO,
-                       'not latin': NOT_LATINO,
-                       'american indian|alaska|native': AI_AN,
-                       'other|unknown|refused|not applicable': UNK,
-                       'multiple|more than one|multi': MUL}
+
+    distinct_data = get_distinct_race_categories(filepath)
 
     for category in distinct_data:
+
+        # Attempt to match values in json to keywords
         string_cat = str(category)
         if re.search('multiple|more than one|multi', string_cat, flags=re.IGNORECASE):
             recoding_dict[category] = MUL
@@ -71,7 +70,8 @@ def apply_recode(distinct_data, recode_all=False):
             recoding_dict[category] = NOT_LATINO
         elif re.search('american indian|alaska|native', string_cat, flags=re.IGNORECASE):
             recoding_dict[category] = AI_AN
-        elif re.search('other|unknown|refused|not applicable|none|declined|chose not|no response|missing|prefer not|not report', string_cat, flags=re.IGNORECASE):
+        elif re.search('other|unknown|refused|not applicable|none|declined|chose not|no response|missing|prefer not|not report',\
+                        string_cat, flags=re.IGNORECASE):
             recoding_dict[category] = UNK
         elif re.search('multiple|more than one|multi|mixed', string_cat, flags=re.IGNORECASE):
             recoding_dict[category] = MUL
@@ -79,16 +79,9 @@ def apply_recode(distinct_data, recode_all=False):
             recoding_dict[category] = UNK
         else:
             unmatched.append(category)
-        
-    return (recoding_dict, unmatched)
-
-def collapse_race_data(filepath, recode_all = False):
-    distinct = get_distinct_race_categories(filepath)
-    
-    recoded, unmatched = apply_recode(distinct, recode_all)
 
     if recode_all:
-        return recoded
-    
+        return recoding_dict
+
     else:
-        return(recoded, unmatched)
+        return (recoding_dict, unmatched)

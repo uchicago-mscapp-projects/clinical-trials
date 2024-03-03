@@ -4,6 +4,7 @@ import pandas as pd
 from .recode import RECODED
 from .collapse_race_data import collapse_race_data, \
     WHITE, BLACK, ASIAN, AI_AN, HI_PI, LATINO, NOT_LATINO, MUL, UNK
+from .collapse_drug_data import recode_trial_drugs
 
 def extract_fields(row):
         """
@@ -26,9 +27,9 @@ def extract_fields(row):
 
         'overall_status': status_module.get('overallStatus', None),
 
-        'start_date': status_module.get('startDate', None),
+        'start_date': status_module.get('startDateStruct', {}).get('date', None),
 
-        'completion_date': status_module.get('completionDate', None),
+        'completion_date': status_module.get('primaryCompletionDateStruct', {}).get('date', None),
 
         'why_stopped': status_module.get('whyStopped', None),
 
@@ -48,14 +49,19 @@ def extract_fields(row):
         
         return fields
 
-def filter_nas(value):
-    try:
-        return(int(value))
-    except ValueError:
-        return 0 
-
 def extract_trial_sex(nct_id, row):
-    """TODO: Doc string"""
+    """
+    Extracts race data from a single entry in the json returned by the
+    Clinical Trials API.
+
+    Args:
+        -- nct_id (str): The nct_id of the row used in extraction.
+        -- row (json object): One row in the clinical trials json
+        -- recoded_data (dict): A dict of recoded race fields used for
+            collapsing race data
+    Returns:
+        -- dict: A dictionary of extracted race data for one trial
+    """
     counts_dict = {'nct_id': nct_id, 'female': None, 'male': None, 'total': None}
 
     measures = row.get('resultsSection', {})\
@@ -82,7 +88,18 @@ def extract_trial_sex(nct_id, row):
     return counts_dict
 
 def extract_trial_race(nct_id, row, recoded_data):
-    """TODO: Doc string"""
+    """
+    Extracts race data from a single entry in the json returned by the
+    Clinical Trials API.
+
+    Args:
+        -- nct_id (str): The nct_id of the row used in extraction.
+        -- row (json object): One row in the clinical trials json
+        -- recoded_data (dict): A dict of recoded race fields used for
+            collapsing race data
+    Returns:
+        -- dict: A dictionary of extracted race data for one trial
+    """
     
     race_dict = {'nct_id': nct_id,
         AI_AN: None, 
@@ -110,7 +127,7 @@ def extract_trial_race(nct_id, row, recoded_data):
 
 def generate_sex_csv(filepath):
     """
-    TODO: Doc string
+    Generates a csv of extracted sex data from the Clinical Trials API.
     """
     sex_counts_final = {'nct_id': [], 'female': [], 'male': [], 'total': []}
     loaded = json.load(open(filepath))
@@ -126,16 +143,11 @@ def generate_sex_csv(filepath):
     df_of_dictionary.to_csv(f'data/csvs/trial_sex.csv', index=None)
     
 def generate_race_csv(filepath):
-    race_counts_final = {'nct_id': [],
-        AI_AN: [], 
-        ASIAN: [], 
-        BLACK: [], 
-        HI_PI: [], 
-        WHITE: [], 
-       MUL: [], 
-        LATINO: [], 
-        NOT_LATINO: [],
-       UNK: []}
+    """
+    Generates a csv of extracted race data from the Clinical Trials API.
+    """
+    race_counts_final = {'nct_id': [], AI_AN: [], ASIAN: [], BLACK: [], 
+        HI_PI: [], WHITE: [], MUL: [], LATINO: [], NOT_LATINO: [], UNK: []}
     
     loaded = json.load(open(filepath))
 
@@ -160,7 +172,7 @@ def generate_trial_csvs(filepath):
     loaded = json.load(open(filepath))
 
     trial_dicts = {
-        'trial_status': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
+        'trials': {'nct_id': [], 'brief_title': [], 'official_title': [], 'lead_sponsor': []},
         'trial_status': {'nct_id': [], 'overall_status': [], 'start_date': [], 'completion_date': [], 'why_stopped': []},
     }
 
@@ -211,7 +223,7 @@ The "extend" calls in generate_trial_csvs_func still work as they
 would have if lists were returned.
 """
 
-
+## Function written by James Turk
 def extract_interventions(fields):
     """
     Take a 'fields' object from extract_fields and build a
@@ -223,6 +235,7 @@ def extract_interventions(fields):
             "intervention_name": intervention["name"],
         }
 
+## Function written by James Turk
 def extract_trial_locations(fields):
     """
     Take a 'fields' object from extract_fields and build a
@@ -235,6 +248,7 @@ def extract_trial_locations(fields):
             "country": loc["country"],
         }
 
+## Function written by James Turk
 def extract_trial_conditions(fields):
     """
     Take a 'fields' object from extract fields and build a
@@ -247,15 +261,9 @@ def extract_trial_conditions(fields):
             "condition": cond,
             "keywords": keywords_flat,
         }
-    # TODO: what do you want to do with keywords & conditions here?
-    # do you want one row for each condition and one row for each
-    # keyword?
-    # I wasn't sure, so for now I generate one row per condition
-    # and flatten keywords into a single row.
-    # You could change this, or let me know the intent and I can
-    # suggest the right path forward.
 
-def generate_trial_csvs_func(filepath):
+## Function written by James Turk
+def generate_interventions_locations_conditions(filepath):
     """
     Takes the filpath of the raw data JSON file, extracts fields,
     and saves them to separate csvs for loading and manipulation.
@@ -264,7 +272,7 @@ def generate_trial_csvs_func(filepath):
     loaded = json.load(open(filepath))
 
     extraction_functions = {
-        "trial_interventions": extract_interventions,
+        "trial_interventions_raw": extract_interventions,
         "trial_locations": extract_trial_locations,
         "trial_conditions": extract_trial_conditions,
     }
@@ -278,8 +286,13 @@ def generate_trial_csvs_func(filepath):
             ext_data.extend(extraction_func(fields))
         df = pd.DataFrame(ext_data)
         df.to_csv(f'data/csvs/{dict_name}.csv', index=None)
+    
+    ## Create recoded file from trial interventions data
+    recode_trial_drugs('data/csvs/fda_full.csv', 'data/csvs/trial_interventions_raw.csv')
 
 if __name__ == "__main__":
     # generate all five CSVs
     generate_trial_csvs('data/trials.json')
-    generate_trial_csvs_func('data/trials.json')
+    generate_interventions_locations_conditions('data/trials.json')
+    generate_race_csv('data/trials.json')
+    generate_sex_csv('data/trials.json')

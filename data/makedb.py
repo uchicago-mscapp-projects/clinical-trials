@@ -4,9 +4,15 @@ import os.path
 import pandas as pd
 from . import extract_trials_data
 
+FILES = [
+    'trial_conditions.csv',
+    'trial_interventions.csv',
+    'trial_locations.csv',
+    'trial_race.csv',
+    'trial_sex.csv'
+]
+
 #TODO: Handle pathing better
-# TODO: Group by for drug, condition, participant diversity counts
-# YEAR, MANUFACTURER, DEMOGRAPHICS, DRUG, CONDITION, DRUG TYPE
 
 # Code adapted from PA3
 def schema():
@@ -84,15 +90,12 @@ def makedb():
     conn = sqlite3.connect('data/trials.db')
     c = conn.cursor()
 
-    extract_trials_data.generate_trial_csvs_func('data/trials.json')
-
-    for file in os.listdir('data/csvs'):
+    for file in FILES:
         df = pd.read_csv(f'data/csvs/{file}')
         table_name = file.split('.')[0]
 
         df.to_sql(table_name, con=conn, if_exists='replace', index=False)
     
-
     #Read transformations SQL script
     with open ('data/transformations.sql', 'r') as sql:
         sql = sql.read()
