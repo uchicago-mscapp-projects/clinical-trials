@@ -15,9 +15,12 @@ def create_canonical_drugs(fda_filename):
     
     """
     fda = pd.read_csv(fda_filename)
+    print(fda.describe())
     fda['brand_name'] = fda['brand_name'].str.lower()
-    fda_deduped = pandas_dedupe.dedupe_dataframe(fda, ['brand_name', 'generic_name'])
-    fda_deduped[['brand_name']].to_csv('data/csvs/canonical_drugs.csv')
+    fda_deduped = pandas_dedupe.dedupe_dataframe(fda, ['brand_name'])
+    fda_canonical = fda_deduped.drop_duplicates(subset=['brand_name'])
+    fda_canonical.to_csv('data/csvs/canonical_drugs.csv', columns=['brand_name'], 
+                         index=False)
 
 def get_probable_matches(canonical_drugs, interventions_filename, tolerance=.85, block_on_first_letter=True):
     """
