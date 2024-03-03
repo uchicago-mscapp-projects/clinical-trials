@@ -125,6 +125,73 @@ def extract_trial_race(nct_id, row, recoded_data):
                             race_dict[code] = cat.get('measurements')[-1]['value']
     return race_dict
 
+## Function written by James Turk
+def extract_interventions(fields):
+    """
+    Take a 'fields' object from extract_fields and build a
+    nct,intervention_name dictionary.
+    """
+    for intervention in fields["intervention_name"]:
+        yield {
+            "nct_id": fields["nct_id"],
+            "intervention_name": intervention["name"],
+        }
+
+## Function written by James Turk
+def extract_trial_locations(fields):
+    """
+    Take a 'fields' object from extract_fields and build a
+    nct_id, city, country dictionary
+    """
+    for loc in fields["locations"]:
+        yield {
+            "nct_id": fields["nct_id"],
+            "city": loc["city"],
+            "country": loc["country"],
+        }
+
+## Function written by James Turk
+def extract_trial_conditions(fields):
+    """
+    Take a 'fields' object from extract fields and build a
+    nct_id, condition, keywords dictionary
+    """
+    for cond in fields["conditions"]:
+        keywords_flat = " ".join(fields["keywords"] or [])
+        yield {
+            "nct_id": fields["nct_id"],
+            "condition": cond,
+            "keywords": keywords_flat,
+        }
+
+## Function written by James Turk
+def generate_iv_loc_cond(filepath):
+    """
+    Takes the filpath of the raw data JSON file, extracts fields,
+    and saves them to separate csvs for loading and manipulation.
+    """
+
+    loaded = json.load(open(filepath))
+
+    extraction_functions = {
+        "trial_interventions_raw": extract_interventions,
+        "trial_locations": extract_trial_locations,
+        "trial_conditions": extract_trial_conditions,
+    }
+
+    for dict_name, extraction_func in extraction_functions.items():
+        ext_data = []
+        for row in loaded:
+            # API object 'row' -> nested dict 'fields'
+            fields = extract_fields(row)
+            # each fields object returns >=1 output row
+            ext_data.extend(extraction_func(fields))
+        df = pd.DataFrame(ext_data)
+        df.to_csv(f'data/csvs/{dict_name}.csv', index=None)
+    
+    ## Create recoded file from trial interventions data
+    recode_trial_drugs('data/csvs/fda_full.csv', 'data/csvs/trial_interventions_raw.csv')
+
 def generate_sex_csv(filepath):
     """
     Generates a csv of extracted sex data from the Clinical Trials API.
@@ -187,112 +254,9 @@ def generate_trial_csvs(filepath):
         df_of_dictionary = pd.DataFrame(dictionary)
         df_of_dictionary.to_csv(f'data/csvs/{dict_name}.csv', index=None)
 
-"""
-Explanation of below functions.
-
-- extract_interventions
-- extract_trial_locations
-- extract_trial_conditions
-- generate_trial_csvs_func
-
-A given 'row' represented by fields sometimes needs to turn into one
-output row, and sometimes many.
-
-You could write this as:
-
-output_rows = []
-for sub_type in fields[sub_field]:
-    output_rows.append({...})
-return output_rows
-
-Where, for example, in the case of locations, the {...}
-would be a {nct_id, city, country} dictionary.
-
-Then, in generate_trial_csvs_func
-we use "extend" instead of "append" to grow our list of
-results by as few as one (where output_rows would only be len==1 if a
-single location (or intervention, etc.) occurred.
-
-This is a very common pattern, and I am using generators to do it.
-A generator function essentially returns multiple values, so the
-code here is equivalent to building lists of output_rows and then
-returning them, except for simplicity's stake, I just yield
-them one at a time.
-
-The "extend" calls in generate_trial_csvs_func still work as they
-would have if lists were returned.
-"""
-
-## Function written by James Turk
-def extract_interventions(fields):
-    """
-    Take a 'fields' object from extract_fields and build a
-    nct,intervention_name dictionary.
-    """
-    for intervention in fields["intervention_name"]:
-        yield {
-            "nct_id": fields["nct_id"],
-            "intervention_name": intervention["name"],
-        }
-
-## Function written by James Turk
-def extract_trial_locations(fields):
-    """
-    Take a 'fields' object from extract_fields and build a
-    nct_id, city, country dictionary
-    """
-    for loc in fields["locations"]:
-        yield {
-            "nct_id": fields["nct_id"],
-            "city": loc["city"],
-            "country": loc["country"],
-        }
-
-## Function written by James Turk
-def extract_trial_conditions(fields):
-    """
-    Take a 'fields' object from extract fields and build a
-    nct_id, condition, keywords dictionary
-    """
-    for cond in fields["conditions"]:
-        keywords_flat = " ".join(fields["keywords"] or [])
-        yield {
-            "nct_id": fields["nct_id"],
-            "condition": cond,
-            "keywords": keywords_flat,
-        }
-
-## Function written by James Turk
-def generate_interventions_locations_conditions(filepath):
-    """
-    Takes the filpath of the raw data JSON file, extracts fields,
-    and saves them to separate csvs for loading and manipulation.
-    """
-
-    loaded = json.load(open(filepath))
-
-    extraction_functions = {
-        "trial_interventions_raw": extract_interventions,
-        "trial_locations": extract_trial_locations,
-        "trial_conditions": extract_trial_conditions,
-    }
-
-    for dict_name, extraction_func in extraction_functions.items():
-        ext_data = []
-        for row in loaded:
-            # API object 'row' -> nested dict 'fields'
-            fields = extract_fields(row)
-            # each fields object returns >=1 output row
-            ext_data.extend(extraction_func(fields))
-        df = pd.DataFrame(ext_data)
-        df.to_csv(f'data/csvs/{dict_name}.csv', index=None)
-    
-    ## Create recoded file from trial interventions data
-    recode_trial_drugs('data/csvs/fda_full.csv', 'data/csvs/trial_interventions_raw.csv')
-
 if __name__ == "__main__":
     # generate all five CSVs
     generate_trial_csvs('data/trials.json')
-    generate_interventions_locations_conditions('data/trials.json')
+    generate_iv_loc_cond('data/trials.json')
     generate_race_csv('data/trials.json')
     generate_sex_csv('data/trials.json')
