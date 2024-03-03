@@ -129,7 +129,7 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
                 'Percentage of Participants By Drug', 
                 'Average Participants By Drug For Each Race', 
                 'Interquartile Range of Participants By Drug',
-                'Missing Observations']
+                'Missing Observations'],
         'Val': [total_participants_by_drug, max_participants_by_drug,
                 min_participants_by_drug, ave_participants_by_drug, 
                 median_participants_by_drug,
@@ -145,7 +145,7 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
 
 # Racial Diversity in Clinical Trials Conducted By Manufacturers: Line Graph
 
-def by_manufacturer(data_manuf):
+def by_manufacturer(data_manuf, manuf):
     """
     Filter race/ethnicity breakdown by manufacturer
     """
@@ -278,7 +278,7 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
                 'Percentage of Participants By Manufacturer', 
                 'Average Participants Each Year', 
                 'Interquartile Range of Participants By Manufacturer',
-                'Missing Observations']
+                'Missing Observations'],
         'Val': [total_participants_by_manufacturer, 
                 max_participants_by_manufacturer,
                 min_participants_by_manufacturer, 

@@ -17,13 +17,14 @@ from dash import html, dcc, Dash, dash_table, State, callback
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Import visualization functions
-from .visualization import by_drug, by_manufacturer
-from .visualization import summary_statistics_table, summary_statistics_manuf_table
+from visualization import by_drug, by_manufacturer
+from visualization import summary_statistics_table, summary_statistics_manuf_table
 
 # Read in data: connect to the SQL database
-connection = sqlite3.connect("data/trials.db")
+connection = sqlite3.connect("../data/trials.db")
 connection.row_factory = sqlite3.Row
 
 cursor = connection.cursor()
@@ -379,7 +380,7 @@ def update_linegraph(selected_manu):
                       con = connection,
                       params = (selected_manu,))
 
-    fig = by_manufacturer(manu_trials)
+    fig = by_manufacturer(manu_trials, selected_manu)
 
     return fig
 

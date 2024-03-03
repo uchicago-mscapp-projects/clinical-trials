@@ -81,10 +81,7 @@ def schema():
 
 def makedb():
 
-    path = pathlib.Path("data/trials.db")
-    path.unlink()
-
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect('data/trials.db')
     c = conn.cursor()
 
     extract_trials_data.generate_trial_csvs_func('data/trials.json')
