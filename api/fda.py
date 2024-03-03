@@ -1,14 +1,15 @@
+"""
+Code for collecting data from the FDA API and outputting to a JSON file.
+"""
+
+import time
+import os.path
 import requests
 import json
-import pandas as pd
-import time
-import urllib.parse
-import os.path
 
 
-def make_fda_api_call(skip, limit=1000,start_date='2003-01-01', end_date ='2024-02-19'):
+def make_fda_api_call(skip, limit=1000, start_date="2003-01-01", end_date="2024-02-19"):
     """
-    #TODO: add URL and search_param back in as parameters?
     Makes an API call to FDA's Drugs@FDA API.
 
     Args:
@@ -17,7 +18,7 @@ def make_fda_api_call(skip, limit=1000,start_date='2003-01-01', end_date ='2024-
         each API query. The API sets this to 1000.
         -start_date: (str) the start date of submission_status_date used in 
         results. For the project, this is set to the start of 2003 to align with
-        the clinical trials data (this is approximately when clinical trials 
+        the clinical trials data (this is approximately when clinical trials
         data is first available from)
         -end_date: (str) the end date of submission_status_date used in 
         results. For the project, this is set to 2/19/2024 to align with our 
@@ -27,23 +28,23 @@ def make_fda_api_call(skip, limit=1000,start_date='2003-01-01', end_date ='2024-
         - response.json(): the json file for that specific page and query.
     """
 
-    print("in make, skip is", skip)
-
-    base_url = 'https://api.fda.gov/drug/drugsfda.json?search=submissions.submission_status_date'
-    #FDA API has trouble parsing parameters, which is why the url is being input
-    #into requests as a string.
-    second_part_url = '%5B' + start_date + '%20TO%20' + end_date + '%5D'
-    third_part_url = '&skip=' + str(skip) + '&limit=1000'
+    base_url = "https://api.fda.gov/drug/drugsfda.json?search=submissions.submission_status_date"
+    # FDA API has trouble parsing parameters, which is why the url is being input
+    # into requests as a string.
+    second_part_url = "%5B" + start_date + "%20TO%20" + end_date + "%5D"
+    third_part_url = "&skip=" + str(skip) + "&limit=" + str(limit)
     url = base_url + second_part_url + third_part_url
-    response = requests.get(url) 
+    response = requests.get(url)
     if response.status_code != 200:
-        return None 
+        return None
     return response.json()
 
 
-def pull_api_trials_data(skip, limit=1000,start_date='2003-01-01', end_date ='2024-02-19'):
-    '''
-        Pull data for the given time frame from the Drugs@FDA API.
+def pull_api_trials_data(
+    skip, limit=1000, start_date="2003-01-01", end_date="2024-02-19"
+):
+    """
+    Pull data for the given time frame from the Drugs@FDA API.
 
     Args:
         - skip: (int) value initially sent to 0. used to paginate.
@@ -59,21 +60,21 @@ def pull_api_trials_data(skip, limit=1000,start_date='2003-01-01', end_date ='20
 
     Returns:
         - Writes data from the API out to a json file.
-    '''
+    """
     results = []
     while True:
-        print("got back here")
         time.sleep(2)
-        fxcall = make_fda_api_call(skip, limit=1000,start_date='2003-01-01', end_date ='2024-02-19')
-        if fxcall is None:
-            print("in the none")
+        apicall = make_fda_api_call(
+            skip, limit=1000, start_date="2003-01-01", end_date="2024-02-19"
+        )
+        if apicall is None:
             break
 
-        results.append(fxcall)
+        results.append(apicall)
         skip += limit
-        print("we incremented skip", skip)
-        write_data(results, 'fda', append=False)
-        
+        write_data(results, "fda", append=False)
+
+
 def write_data(data, source, append=True):
     """
     Writes data returned by an API call to a JSON file format.
@@ -87,10 +88,11 @@ def write_data(data, source, append=True):
     Returns:
         Creates or appends to the file specified.
     """
+
     if append:
-        mode = 'a'
+        mode = "a"
     else:
-        mode = 'w'
-    filename = os.path.join('./data', source + '.json')
+        mode = "w"
+    filename = os.path.join("./data", source + ".json")
     with open(filename, mode=mode) as f:
-            f.write(json.dumps(data))
+        f.write(json.dumps(data))
