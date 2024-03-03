@@ -165,7 +165,7 @@ def extract_trial_conditions(fields):
         }
 
 ## Function written by James Turk
-def generate_iv_loc_cond(filepath):
+def generate_iv_loc_cond_csvs(filepath):
     """
     Takes the filpath of the raw data JSON file, extracts fields,
     and saves them to separate csvs for loading and manipulation.
@@ -257,6 +257,6 @@ def generate_trial_csvs(filepath):
 if __name__ == "__main__":
     # generate all five CSVs
     generate_trial_csvs('data/trials.json')
-    generate_iv_loc_cond('data/trials.json')
+    generate_iv_loc_cond_csvs('data/trials.json')
     generate_race_csv('data/trials.json')
     generate_sex_csv('data/trials.json')
