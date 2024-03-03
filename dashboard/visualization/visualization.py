@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import dash
 from dash import doc, html, dash_table
+import mpld3
 
 # Race/Ethnicity Breakdown of Clinical Trials: Stacked Bar Chart
 
