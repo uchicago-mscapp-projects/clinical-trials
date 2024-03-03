@@ -15,7 +15,6 @@ def create_canonical_drugs(fda_filename):
     
     """
     fda = pd.read_csv(fda_filename)
-    print(fda.describe())
     fda['brand_name'] = fda['brand_name'].str.lower()
     fda_deduped = pandas_dedupe.dedupe_dataframe(fda, ['brand_name'])
     fda_canonical = fda_deduped.drop_duplicates(subset=['brand_name'])

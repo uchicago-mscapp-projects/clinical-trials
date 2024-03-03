@@ -34,18 +34,6 @@ connection.row_factory = sqlite3.Row
 
 cursor = connection.cursor()
 
-# Define lists of possible treatments and of possible manufacturers
-# Pull interventions tested in at least 5 trials
-# trts_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
-#         GROUP BY INTERVENTION_NAME HAVING count(*) >= 5"
-# trt_list = pd.read_sql_query(trts_query, connection)
-
-# Pull manufacturers who have sponsored at least 5 trials
-# manu_query = "SELECT DISTINCT sponsor_name FROM FDA_FULL \
-#     GROUP BY sponsor_name HAVING count(*) >= 5"
-# manu_list = pd.read_sql_query(manu_query, connection)
-
-
 
 # Table function from https://dash.plotly.com/layout
 
@@ -117,11 +105,13 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                             html.Br(),
                             html.Div(children='Choose the treatment of interest'),
-                        dcc.Dropdown(id='treatment-dropdown', #options=trt_list, 
+                        dcc.Dropdown(id='treatment-dropdown',
                             placeholder="Select a treatment", style={'width': '100%'}),
                         html.H3(id = 'generic_name',style={'textAlign': 'left','color': colors['text']}),
                         html.H3(id = 'brand_name',style={'textAlign': 'left','color': colors['text']}),
                         html.H3(id = 'manufacturer',style={'textAlign': 'left','color': colors['text']}),
+                        html.H3(id = 'submission_year',style={'textAlign': 'left','color': colors['text']}),
+                        html.H3(id = 'app_number',style={'textAlign': 'left','color': colors['text']}),
                         # Dropdown of the conditions for the treatment selected above
                         dcc.Dropdown(id='conditions-dropdown', 
                             placeholder="Select a condition the treatment is used for", style={'width': '100%'}),
@@ -129,16 +119,11 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                         html.Div(children=[html.Iframe(
                             id="stacked-bar", srcDoc=None,
                             style={"border-width":"0","width":"100%","height":"600px"}
-                            )]) ],
+                            )]),
                         #dcc.Graph(id='stacked-bar', style={'width': '100%'})],
                         # Table of stats from visualization.py
-                        # dash_table.DataTable(
-                        #     id='table-by-treatment',
-                        #     columns=[
-                        #     {'name': 'Stat', 'id': 'Statistic'},
-                        #     {'name': 'Val', 'id': 'Value'}]) ],
-                        #html.Div(id='table-by-treatment')],
-                        #html.Div([dash_table.DataTable(id='table-by-treatment')])],
+                        html.Td(id="table-by-treatment",style={'width': '600px','height': '60px','textAlign': 'left'})
+                            ],
                             className = 'five columns')
 
 # By manufacturer section
@@ -153,19 +138,12 @@ search_manufacturer = html.Div([html.H2(children='Search by manufacturer',
                         html.Br(),
                         html.Div(children=[html.Iframe(
                             id="line-graph", srcDoc=None,
-                            style={"border-width":"5","width":"100%","height":"600px"}
-                            )]) ],
-                        #dcc.Graph(id='line-graph', style={'width': '100%'})],
-                         className = 'five columns'
-                        # Table of stats from visualization.py
-                        #html.Div([dash_table.DataTable(id='table-by-manufacturer')])],
-                        # dash_table.DataTable(
-                        #     id='table-by-manufacturer',
-                        #     columns=[
-                        #     {'name': 'Stat', 'id': 'Statistic'},
-                        #     {'name': 'Val', 'id': 'Value'}]) ],
+                            style={"border-width":"5","width":"100%","height":"600px", 'color': colors['text']}
+                            )]),
+                        html.Td(id="table-by-manufacturer",style={'width': '600px','height': '60px','textAlign': 'left'})
+                            ],
                         #html.Div(id='table-by-manufacturer')],
-                      )
+                        className = 'five columns')
 
 # Define app layout
 app.layout = html.Div(children=[
@@ -200,13 +178,14 @@ def update_options(search_value):
     connection.row_factory = sqlite3.Row
     
     trts_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
-            GROUP BY INTERVENTION_NAME HAVING count(*) >= 5"
+            GROUP BY intervention_name HAVING count(*) >= 5"
     trt_list = pd.read_sql_query(trts_query, connection)
     if not search_value:
         raise PreventUpdate
+
     return_vals = []
     for _, val in enumerate(trt_list.values):
-        if val[0].startswith(search_value):
+        if val[0].startswith(search_value.lower()):
             return_vals.append(val[0])
     return return_vals
 
@@ -245,7 +224,7 @@ def update_output_brand(selected_trt):
 
     query = "SELECT distinct FDA_FULL.brand_name \
     FROM FDA_FULL \
-    WHERE generic_name = ?"
+    WHERE generic_name like ?"
     if not selected_trt:
         raise PreventUpdate
     brand_name = pd.read_sql_query(sql = query, 
@@ -281,6 +260,51 @@ def update_output_manufacturer(selected_trt):
                       params = (selected_trt,))
 
     return "Manufacturer(s): {}".format(', '.join(manufacturer["lead_sponsor"]))
+
+
+# Callback function for printing the submission year(s)
+@app.callback(
+        Output(component_id = 'submission_year', component_property ='children'),
+        Input(component_id="treatment-dropdown", component_property='value')
+        )
+
+def update_output_sub(selected_trt):
+    connection = sqlite3.connect("data/trials.db")
+    connection.row_factory = sqlite3.Row
+
+    query = "SELECT distinct \
+    CAST(SUBSTR(FDA_FULL.submission_status_date, 1, 4) AS integer) as Year \
+    FROM FDA_FULL \
+    WHERE generic_name like ?"
+    if not selected_trt:
+        raise PreventUpdate
+    submission_year = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt,))
+    
+    return "Submission year(s): {}".format(', '.join(str(x) for x in submission_year["Year"]))
+
+
+# Callback function for printing the application number(s)
+@app.callback(
+        Output(component_id = 'app_number', component_property ='children'),
+        Input(component_id="treatment-dropdown", component_property='value')
+        )
+
+def update_output_app(selected_trt):
+    connection = sqlite3.connect("data/trials.db")
+    connection.row_factory = sqlite3.Row
+
+    query = "SELECT distinct FDA_FULL.application_number \
+    FROM FDA_FULL \
+    WHERE generic_name like ?"
+    if not selected_trt:
+        raise PreventUpdate
+    app_number = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt,))
+    
+    return "Application number(s): {}".format(', '.join(app_number["application_number"]))
 
 
 # Callback function for pulling list of conditions for the treatment
@@ -331,11 +355,7 @@ def update_stackedbar(selected_trt, selected_cond):
 	COALESCE(SUM(TRIAL_RACE.hispanic_or_latino), 0) AS Hispanic, \
     COALESCE(SUM(TRIAL_RACE.american_indian_or_alaska_native + \
         TRIAL_RACE.hawaiian_or_pacific_islander + \
-        TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other, \
-	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
-	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
-	SUM(TRIAL_RACE.multiple) AS multi_race, \
-	SUM(TRIAL_RACE.unknown) AS unknown \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other \
 	FROM TRIAL_RACE INNER JOIN TRIAL_INTERVENTIONS \
 	on TRIAL_RACE.nct_id = TRIAL_INTERVENTIONS.nct_id \
 	INNER JOIN TRIAL_CONDITIONS \
@@ -358,48 +378,41 @@ def update_stackedbar(selected_trt, selected_cond):
 
 # Callback for updating the table underneath the stacked bar chart
     # https://community.plotly.com/t/display-tables-in-dash/4707/13
-# @app.callback(Output('table-by-treatment', 'data'), 
-#         Input(component_id="treatment-dropdown", component_property='value'),
-#         Input(component_id="conditions-dropdown", component_property='value'))
-# def update_table_by_treatment(selected_trt, selected_cond):
-#     connection = sqlite3.connect("data/trials.db")
-#     connection.row_factory = sqlite3.Row
+@app.callback(Output('table-by-treatment', 'children'), 
+        Input(component_id="treatment-dropdown", component_property='value'),
+        Input(component_id="conditions-dropdown", component_property='value'))
+def update_table_by_treatment(selected_trt, selected_cond):
+    connection = sqlite3.connect("data/trials.db")
+    connection.row_factory = sqlite3.Row
 
-#     query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
-#     TRIAL_CONDITIONS.condition, \
-# 	COALESCE(SUM(TRIAL_RACE.asian), 0) AS Asian, \
-# 	COALESCE(SUM(TRIAL_RACE.black), 0) AS Black, \
-# 	COALESCE(SUM(TRIAL_RACE.white), 0) AS White, \
-# 	COALESCE(SUM(TRIAL_RACE.hispanic_or_latino), 0) AS Hispanic, \
-#     COALESCE(SUM(TRIAL_RACE.american_indian_or_alaska_native + \
-#         TRIAL_RACE.hawaiian_or_pacific_islander + \
-#         TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other,\
-# 	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
-# 	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
-# 	SUM(TRIAL_RACE.multiple) AS multi_race, \
-# 	SUM(TRIAL_RACE.unknown) AS unknown \
-# 	FROM TRIAL_RACE INNER JOIN TRIAL_INTERVENTIONS \
-# 	on TRIAL_RACE.nct_id = TRIAL_INTERVENTIONS.nct_id \
-# 	INNER JOIN TRIAL_CONDITIONS \
-# 	on TRIAL_RACE.nct_id = TRIAL_CONDITIONS.nct_id \
-# 	WHERE TRIAL_INTERVENTIONS.intervention_name LIKE ? \
-# 	AND TRIAL_CONDITIONS.CONDITION LIKE ? \
-# 	GROUP BY TRIAL_INTERVENTIONS.intervention_name, TRIAL_CONDITIONS.condition"
+    query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
+    TRIAL_CONDITIONS.condition, \
+	COALESCE(SUM(TRIAL_RACE.asian), 0) AS Asian, \
+	COALESCE(SUM(TRIAL_RACE.black), 0) AS Black, \
+	COALESCE(SUM(TRIAL_RACE.white), 0) AS White, \
+	COALESCE(SUM(TRIAL_RACE.hispanic_or_latino), 0) AS Hispanic, \
+    COALESCE(SUM(TRIAL_RACE.american_indian_or_alaska_native + \
+        TRIAL_RACE.hawaiian_or_pacific_islander + \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other \
+	FROM TRIAL_RACE INNER JOIN TRIAL_INTERVENTIONS \
+	on TRIAL_RACE.nct_id = TRIAL_INTERVENTIONS.nct_id \
+	INNER JOIN TRIAL_CONDITIONS \
+	on TRIAL_RACE.nct_id = TRIAL_CONDITIONS.nct_id \
+	WHERE TRIAL_INTERVENTIONS.intervention_name LIKE ? \
+	AND TRIAL_CONDITIONS.CONDITION LIKE ? \
+	GROUP BY TRIAL_INTERVENTIONS.intervention_name, TRIAL_CONDITIONS.condition"
 
-#     trt_trials = pd.read_sql_query(sql = query, 
-#                       con = connection,
-#                       params = (selected_trt, selected_cond))
+    trt_trials = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_trt, selected_cond))
 
-#     table_by_drug = summary_statistics_table(trt_trials, \
-#                                     selected_trt, selected_cond)
+    table_by_drug = summary_statistics_table(trt_trials, \
+                                    selected_trt, selected_cond)
 
-#     title_first_part = 'Racial Diversity in Clinical Trials Conducted for '
-#     title_second_part = ' in '
+    title_first_part = 'Racial Diversity in Clinical Trials Conducted for '
+    title_second_part = ' in '
 
-#     return table_by_drug.to_dict()
-    # return generate_table(table_by_drug, 
-    #         title = title_first_part + '{}'.format(selected_trt) + \
-    #             title_second_part + '{}'.format(selected_cond))
+    return table_by_drug.to_json(orient="records")
 
 
 # Callback function for searching manufacturers
@@ -432,7 +445,7 @@ def update_linegraph(selected_manu):
     connection = sqlite3.connect("data/trials.db")
     connection.row_factory = sqlite3.Row
 
-    query = "SELECT TRIALS.lead_sponsor as Manufacturer, \
+    query = "SELECT distinct TRIALS.lead_sponsor as Manufacturer, \
     CAST(SUBSTR(TRIAL_STATUS.start_date, 1, 4) AS integer) as Year, \
 	COALESCE(SUM(TRIAL_RACE.asian), 0) AS Asian, \
 	COALESCE(SUM(TRIAL_RACE.black), 0) AS Black, \
@@ -440,18 +453,14 @@ def update_linegraph(selected_manu):
 	COALESCE(SUM(TRIAL_RACE.hispanic_or_latino), 0) AS Hispanic, \
     COALESCE(SUM(TRIAL_RACE.american_indian_or_alaska_native + \
         TRIAL_RACE.hawaiian_or_pacific_islander + \
-        TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other,\
-	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
-	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
-	SUM(TRIAL_RACE.multiple) AS multi_race, \
-	SUM(TRIAL_RACE.unknown) AS unknown \
-	FROM TRIAL_RACE INNER JOIN TRIALS \
-	on TRIAL_RACE.nct_id = TRIALS.nct_id \
-    INNER JOIN TRIAL_STATUS \
-	on TRIAL_RACE.nct_id = TRIALS.nct_id \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other\
+	FROM TRIALS INNER JOIN TRIAL_STATUS \
+	on TRIALS.nct_id = TRIAL_STATUS.nct_id \
+    INNER JOIN TRIAL_RACE \
+	on TRIALS.nct_id = TRIAL_RACE.nct_id \
 	WHERE TRIALS.lead_sponsor LIKE ? \
-	GROUP BY TRIALS.lead_sponsor, \
-    CAST(SUBSTR(TRIAL_STATUS.start_date, 1, 4) AS integer)"
+    and TRIAL_RACE.WHITE IS NOT NULL \
+	GROUP BY Year"
 
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -467,41 +476,41 @@ def update_linegraph(selected_manu):
 
 # Callback for updating the table underneath the line graph by manufacturer
     # https://community.plotly.com/t/display-tables-in-dash/4707/13
-# @app.callback(Output('table-by-manufacturer', 'data'), 
-#         Input(component_id="manufacturer-dropdown", component_property='value'))
-# def update_table_by_manufacturer(selected_manu):
-#     connection = sqlite3.connect("data/trials.db")
-#     connection.row_factory = sqlite3.Row
+@app.callback(Output('table-by-manufacturer', 'children'), 
+        Input(component_id="manufacturer-dropdown", component_property='value'))
+def update_table_by_manufacturer(selected_manu):
+    connection = sqlite3.connect("data/trials.db")
+    connection.row_factory = sqlite3.Row
 
-#     query = "SELECT TRIALS.lead_sponsor as Manufacturer, \
-# 	COALESCE(SUM(TRIAL_RACE.asian), 0) AS Asian, \
-# 	COALESCE(SUM(TRIAL_RACE.black), 0) AS Black, \
-# 	COALESCE(SUM(TRIAL_RACE.white), 0) AS White, \
-# 	COALESCE(SUM(TRIAL_RACE.hispanic_or_latino), 0) AS Hispanic, \
-#     COALESCE(SUM(TRIAL_RACE.american_indian_or_alaska_native + \
-#         TRIAL_RACE.hawaiian_or_pacific_islander + \
-#         TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other,\
-# 	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
-# 	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
-# 	SUM(TRIAL_RACE.multiple) AS multi_race, \
-# 	SUM(TRIAL_RACE.unknown) AS unknown \
-# 	FROM TRIAL_RACE INNER JOIN TRIALS \
-# 	on TRIAL_RACE.nct_id = TRIALS.nct_id \
-# 	WHERE TRIALS.lead_sponsor LIKE ? \
-# 	GROUP BY TRIALS.lead_sponsor"
-#     # query = "SELECT * FROM trials WHERE manufacturer = ?"
+    query = "SELECT TRIALS.lead_sponsor as Manufacturer, \
+	COALESCE(SUM(TRIAL_RACE.asian), 0) AS Asian, \
+	COALESCE(SUM(TRIAL_RACE.black), 0) AS Black, \
+	COALESCE(SUM(TRIAL_RACE.white), 0) AS White, \
+	COALESCE(SUM(TRIAL_RACE.hispanic_or_latino), 0) AS Hispanic, \
+    COALESCE(SUM(TRIAL_RACE.american_indian_or_alaska_native + \
+        TRIAL_RACE.hawaiian_or_pacific_islander + \
+        TRIAL_RACE.multiple + TRIAL_RACE.unknown), 0) AS Other,\
+	SUM(TRIAL_RACE.american_indian_or_alaska_native) AS AIAN, \
+	SUM(TRIAL_RACE.hawaiian_or_pacific_islander) AS HPI, \
+	SUM(TRIAL_RACE.multiple) AS multi_race, \
+	SUM(TRIAL_RACE.unknown) AS unknown \
+	FROM TRIAL_RACE INNER JOIN TRIALS \
+	on TRIAL_RACE.nct_id = TRIALS.nct_id \
+	WHERE TRIALS.lead_sponsor LIKE ? \
+	GROUP BY TRIALS.lead_sponsor"
+    # query = "SELECT * FROM trials WHERE manufacturer = ?"
 
-#     manu_trials = pd.read_sql_query(sql = query, 
-#                       con = connection,
-#                       params = (selected_manu,))
+    manu_trials = pd.read_sql_query(sql = query, 
+                      con = connection,
+                      params = (selected_manu,))
     
-#     table_by_manu = summary_statistics_manuf_table(manu_trials, selected_manu)
+    table_by_manu = summary_statistics_manuf_table(manu_trials, selected_manu)
 
-#     title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By Manufacturers for '
+    title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By Manufacturers for '
 
-#     return table_by_manu.to_dict()
-    # return generate_table(table_by_manu, 
-    #         title = title_first_part_manuf + '{}'.format(selected_manu))
+    return table_by_manu.to_json(orient="records")
+    return generate_table(table_by_manu, 
+            title = title_first_part_manuf + '{}'.format(selected_manu))
 
 
 def by_drug(data_drug, treatment_of_interest, condition_of_interest):
@@ -510,7 +519,9 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
     """
     # SOURCE: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.
     # html
-    f = plt.figure(figsize = (10,6))
+    data_drug['intervention_name'] = data_drug['intervention_name'].astype('category')
+
+    f = plt.figure(figsize = (8,6))
     plt.bar(data_drug['intervention_name'], data_drug['White'], color = 'red', label= 'White')
     plt.bar(data_drug['intervention_name'], data_drug['Black'], color = 'orange', label= 'Black')
     plt.bar(data_drug['intervention_name'], data_drug['Asian'], color = 'yellow', label= 'Asian')
@@ -519,8 +530,7 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
 
     plt.xlabel('Treatment Intervention')
     plt.ylabel('Number of Participants')
-    
-    #plt.title('Race/Ethnicity Breakdown of Clinical Trials for {}'.format(drug))
+
     title_first_part = 'Race/Ethnicity Breakdown of Clinical Trials for '
 
     # SOURCE: https://peps.python.org/pep-0498/
@@ -571,7 +581,7 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
                     total_participants_by_drug) * 100
     other_perc_drug = (data_drug['Other'] / 
                     total_participants_by_drug) * 100
-    
+
     perc_participants_by_drug[treatment_of_interest] = {
         'Percentage of Whites By Drug': white_perc_drug,
         'Percentage of Blacks By Drug': black_perc_drug,
@@ -612,31 +622,41 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
     # rows of data
 
     na_drug[treatment_of_interest] = data_drug[data_drug.isna().any(axis=1)]
-    print(na_drug)
 
     # Put Summary Statistics in a dataframe to be used for dashboard viz
-    df_manuf = pd.DataFrame({
+    df_drug = pd.DataFrame({
         'Stat': ['Total Participants By Drug', 
                 'Maximum Participants By Drug', 
                 'Minimum Participants By Drug',
                 'Average Participants By Drug',
                 'Median Participants By Drug', 
                 'Range of Participants By Drug',
-                # 'Percentage of Participants By Drug', 
-                # 'Average Participants By Drug For Each Race', 
-                # 'Interquartile Range of Participants By Drug',
+                'Percentage of Participants By Drug', 
+                'Average Participants By Drug For Each Race', 
+                'Interquartile Range of Participants By Drug',
                 'Missing Observations'],
         'Val': [total_participants_by_drug, max_participants_by_drug,
                 min_participants_by_drug, ave_participants_by_drug, 
                 median_participants_by_drug,
                 range_participants_by_drug, 
-                # perc_participants_by_drug,
-                # ave_participants_by_drug_each_race, iqr_by_drug, 
+                perc_participants_by_drug,
+                ave_participants_by_drug_each_race, iqr_by_drug, 
                 na_drug]
     })
 
-    return df_manuf
+    return df_drug
+    dash_table.DataTable(
+				columns=[{"name": i, "id": i} for i in df_drug.columns],
+				data=df_drug.to_dict("records"),
+				style_cell={'width': '300px',
+				'height': '60px',
+				'textAlign': 'left'})
 
+    return df_drug.to_dict()
+    return dash_table.DataTable(
+                data=df_drug.to_dict(),
+                columns=[{"id": x, "name": x} for x in df_drug.columns],
+            )
 
 
 # Racial Diversity in Clinical Trials Conducted By Manufacturers: Line Graph
@@ -647,6 +667,8 @@ def by_manufacturer(data_manuf, manuf):
     """
     # SOURCE: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.
     # html
+    data_manuf.dropna(subset = ['Year'], inplace=True)
+
     f = plt.figure(figsize = (10,6))
 
     white_perc = []
@@ -657,7 +679,7 @@ def by_manufacturer(data_manuf, manuf):
 
     for year in data_manuf['Year']:
         total_participants_by_manufacturer = data_manuf[
-            data_manuf['Year'] == year].sum(axis=1)
+            data_manuf['Year'] == year].drop(['Manufacturer', 'Year'], axis=1).sum(axis=1)
         white_perc.append((data_manuf[data_manuf['Year'] == year]['White'] /
                            total_participants_by_manufacturer) * 100)
         black_perc.append((data_manuf[data_manuf['Year'] == year]['Black'] /
@@ -761,7 +783,6 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
     # rows of data
 
     na_manufacturer[manufacturer] = data_manuf[data_manuf.isna().any(axis=1)]
-    #print(na_manufacturer)
 
     # Put Summary Statistics in a dataframe to be used for dashboard viz
     df_manuf = pd.DataFrame({
@@ -771,9 +792,9 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
                 'Average Participants By Manufacturer',
                 'Median Participants By Manufacturer', 
                 'Range of Participants By Manufacturer',
-                # 'Percentage of Participants By Manufacturer', 
-                # 'Average Participants Each Year', 
-                # 'Interquartile Range of Participants By Manufacturer',
+                'Percentage of Participants By Manufacturer', 
+                'Average Participants Each Year', 
+                'Interquartile Range of Participants By Manufacturer',
                 'Missing Observations'],
         'Val': [total_participants_by_manufacturer, 
                 max_participants_by_manufacturer,
@@ -781,10 +802,18 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
                 ave_participants_by_manufacturer,
                 median_participants_by_manufacturer, 
                 range_participants_by_manufacturer, 
-                # perc_participants_by_manufacturer,
-                # ave_participants_by_manufacturer_each_race, 
-                # iqr_by_manufacturer, 
+                perc_participants_by_manufacturer,
+                ave_participants_by_manufacturer_each_race, 
+                iqr_by_manufacturer, 
                 na_manufacturer]
     })
 
     return df_manuf
+    return html.Div(
+        [
+            dash_table.DataTable(
+                data=df_manuf.to_dict(),
+                columns=[{"id": x, "name": x} for x in df_manuf.columns],
+            )
+        ]
+    )

@@ -17,7 +17,9 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
     """
     # SOURCE: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.
     # html
-    plt.figure(figsize = (10,6))
+    data_drug['intervention_name'] = data_drug['intervention_name'].astype('category')
+
+    f = plt.figure(figsize = (8,6))
     plt.bar(data_drug['intervention_name'], data_drug['White'], color = 'red', label= 'White')
     plt.bar(data_drug['intervention_name'], data_drug['Black'], color = 'orange', label= 'Black')
     plt.bar(data_drug['intervention_name'], data_drug['Asian'], color = 'yellow', label= 'Asian')
@@ -26,25 +28,26 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
 
     plt.xlabel('Treatment Intervention')
     plt.ylabel('Number of Participants')
-    
-    #plt.title('Race/Ethnicity Breakdown of Clinical Trials for {}'.format(drug))
+
     title_first_part = 'Race/Ethnicity Breakdown of Clinical Trials for '
 
     # SOURCE: https://peps.python.org/pep-0498/
     # String Interpolation Using F-Strings
     if treatment_of_interest:
-        title_treatment_of_interest = f' ({treatment_of_interest})'
+        title_treatment_of_interest = f' {treatment_of_interest}'
     else:
         title_treatment_of_interest = ''
     if condition_of_interest:
-        title_condition_of_interest = f' ({condition_of_interest})'
+        title_condition_of_interest = f' {condition_of_interest}'
     else:
         title_condition_of_interest = ''
-    title = title_first_part + title_treatment_of_interest + 'in' + title_condition_of_interest
+    title = title_first_part + title_treatment_of_interest + ' in ' + title_condition_of_interest
 
     plt.title(title)
     plt.legend()
-    plt.show()
+
+    html_matplotlib = mpld3.fig_to_html(f)
+    return html_matplotlib
 
 
 # Race/Ethnicity Breakdown of Clinical Trials: Data Analysis
@@ -76,7 +79,7 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
                     total_participants_by_drug) * 100
     other_perc_drug = (data_drug['Other'] / 
                     total_participants_by_drug) * 100
-    
+
     perc_participants_by_drug[treatment_of_interest] = {
         'Percentage of Whites By Drug': white_perc_drug,
         'Percentage of Blacks By Drug': black_perc_drug,
@@ -117,10 +120,9 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
     # rows of data
 
     na_drug[treatment_of_interest] = data_drug[data_drug.isna().any(axis=1)]
-    print(na_drug)
 
     # Put Summary Statistics in a dataframe to be used for dashboard viz
-    df_manuf = pd.DataFrame({
+    df_drug = pd.DataFrame({
         'Stat': ['Total Participants By Drug', 
                 'Maximum Participants By Drug', 
                 'Minimum Participants By Drug',
@@ -130,7 +132,7 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
                 'Percentage of Participants By Drug', 
                 'Average Participants By Drug For Each Race', 
                 'Interquartile Range of Participants By Drug',
-                'Missing Observations']
+                'Missing Observations'],
         'Val': [total_participants_by_drug, max_participants_by_drug,
                 min_participants_by_drug, ave_participants_by_drug, 
                 median_participants_by_drug,
@@ -140,19 +142,20 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
                 na_drug]
     })
 
-    return df_manuf
-
+    return df_drug
 
 
 # Racial Diversity in Clinical Trials Conducted By Manufacturers: Line Graph
 
-def by_manufacturer(data_manuf):
+def by_manufacturer(data_manuf, manuf):
     """
     Filter race/ethnicity breakdown by manufacturer
     """
     # SOURCE: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.
     # html
-    plt.figure(figsize = (10,6))
+    data_manuf.dropna(subset = ['Year'], inplace=True)
+
+    f = plt.figure(figsize = (10,6))
 
     white_perc = []
     black_perc = []
@@ -162,7 +165,7 @@ def by_manufacturer(data_manuf):
 
     for year in data_manuf['Year']:
         total_participants_by_manufacturer = data_manuf[
-            data_manuf['Year'] == year].sum(axis=1)
+            data_manuf['Year'] == year].drop(['Manufacturer', 'Year'], axis=1).sum(axis=1)
         white_perc.append((data_manuf[data_manuf['Year'] == year]['White'] /
                            total_participants_by_manufacturer) * 100)
         black_perc.append((data_manuf[data_manuf['Year'] == year]['Black'] /
@@ -184,14 +187,16 @@ def by_manufacturer(data_manuf):
 
     plt.xlabel('Year')
     plt.ylabel('Number of Participants')
-    
-    title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By Manufacturers for '
+
+    title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By '
     title_manuf = title_first_part_manuf + '{}'.format(manuf)
     plt.title(title_manuf)
     
     plt.legend()
     plt.grid(True)
-    plt.show()
+
+    html_matplotlib = mpld3.fig_to_html(f)
+    return html_matplotlib
 
 
 # Racial Diversity in Clinical Trials Conducted By Manufacturers: Data Analysis
@@ -264,7 +269,6 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
     # rows of data
 
     na_manufacturer[manufacturer] = data_manuf[data_manuf.isna().any(axis=1)]
-    print(na_manufacturer)
 
     # Put Summary Statistics in a dataframe to be used for dashboard viz
     df_manuf = pd.DataFrame({
@@ -277,7 +281,7 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
                 'Percentage of Participants By Manufacturer', 
                 'Average Participants Each Year', 
                 'Interquartile Range of Participants By Manufacturer',
-                'Missing Observations']
+                'Missing Observations'],
         'Val': [total_participants_by_manufacturer, 
                 max_participants_by_manufacturer,
                 min_participants_by_manufacturer, 
