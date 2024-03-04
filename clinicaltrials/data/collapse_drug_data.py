@@ -1,8 +1,9 @@
 import pandas as pd
 import jellyfish
 import pandas_dedupe
+import pathlib
 
-def create_canonical_data(fda_filename, field):
+def create_canonical_drugs(fda_filename):
     """
     Creates a canonical list of drugs from the fda data using fuzzy deduping.
 
@@ -15,13 +16,16 @@ def create_canonical_data(fda_filename, field):
     
     """
     fda = pd.read_csv(fda_filename)
+
     fda['brand_name'] = fda['brand_name'].str.lower()
     fda_deduped = pandas_dedupe.dedupe_dataframe(fda, ['brand_name'])
     fda_canonical = fda_deduped.drop_duplicates(subset=['brand_name'])
-    fda_canonical.to_csv('data/csvs/canonical_drugs.csv', columns=['brand_name'], 
+
+    filename = pathlib.Path(__file__).parent / f"../../data/csvs/canonical_drugs.csv"
+    fda_canonical.to_csv(filename, columns=['brand_name'], 
                          index=False)
 
-def get_probable_matches(canonical_data, raw_trials_filename, field, tolerance=.85):
+def get_probable_matches(canonical_data, raw_trials_filename, tolerance=.85):
     """
     Loads a csv of fda data containing drug names, and clincal trials data
     containing intervention names, and attempts to fuzzy match them
@@ -34,7 +38,7 @@ def get_probable_matches(canonical_data, raw_trials_filename, field, tolerance=.
     """
     raw = pd.read_csv(raw_trials_filename)
 
-    raw_unique = raw[field].str.lower().unique()
+    raw_unique = raw['intervention_name'].str.lower().unique()
     
     recoded = {}
     for raw_entry in raw_unique:
@@ -49,7 +53,7 @@ def get_probable_matches(canonical_data, raw_trials_filename, field, tolerance=.
     return recoded
 
 
-def recode_trial_drugs(canonical_filename, raw_filename, field):
+def recode_trial_drugs(canonical_filename, raw_filename):
     """
     Recodes drug names returned by the clinical trials API to match
     their canonical names in the FDA dataset.
@@ -71,5 +75,7 @@ def recode_trial_drugs(canonical_filename, raw_filename, field):
     
     # Recoding introduces duplicates
     trials = trial_interventions.drop_duplicates()
-    trials.to_csv('data/csvs/trial_interventions.csv', index=None)
+
+    filename = pathlib.Path(__file__).parent / f"../../data/csvs/trial_interventions.csv"
+    trials.to_csv(filename, index=None)
     

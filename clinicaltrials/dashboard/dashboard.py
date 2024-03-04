@@ -21,6 +21,7 @@ from dash import html
 import numpy as np
 import matplotlib.pyplot as plt
 import mpld3
+import pathlib
 
 plt.switch_backend('Agg') 
 
@@ -29,11 +30,11 @@ plt.switch_backend('Agg')
 # from visualization import summary_statistics_table, summary_statistics_manuf_table
 
 # Read in data: connect to the SQL database
-connection = sqlite3.connect("data/trials.db")
+pth = pathlib.Path(__file__).parent / f"../../data/trials.db"
+connection = sqlite3.connect(pth)
 connection.row_factory = sqlite3.Row
 
 cursor = connection.cursor()
-
 
 # Table function from https://dash.plotly.com/layout
 
@@ -174,7 +175,7 @@ app.layout = html.Div(children=[
         Input(component_id="treatment-dropdown", component_property='search_value')
         )
 def update_options(search_value):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
     
     trts_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
@@ -197,7 +198,7 @@ def update_options(search_value):
         )
 
 def update_output_generic(selected_trt):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT distinct TRIAL_INTERVENTIONS.intervention_name \
@@ -219,7 +220,7 @@ def update_output_generic(selected_trt):
         )
 
 def update_output_brand(selected_trt):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT distinct FDA_FULL.brand_name \
@@ -242,7 +243,7 @@ def update_output_brand(selected_trt):
 
 # Pull manufacturers who have sponsored at least 2 trials
 def update_output_manufacturer(selected_trt):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT DISTINCT trials.lead_sponsor \
@@ -269,7 +270,7 @@ def update_output_manufacturer(selected_trt):
         )
 
 def update_output_sub(selected_trt):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT distinct \
@@ -292,7 +293,7 @@ def update_output_sub(selected_trt):
         )
 
 def update_output_app(selected_trt):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT distinct FDA_FULL.application_number \
@@ -315,7 +316,7 @@ def update_output_app(selected_trt):
         Input(component_id="treatment-dropdown", component_property='value')
         )
 def update_output_conditions(selected_trt):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT distinct TRIAL_CONDITIONS.condition \
@@ -344,7 +345,7 @@ def update_output_conditions(selected_trt):
         Input(component_id="conditions-dropdown", component_property='value')
         )
 def update_stackedbar(selected_trt, selected_cond):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
@@ -382,7 +383,7 @@ def update_stackedbar(selected_trt, selected_cond):
         Input(component_id="treatment-dropdown", component_property='value'),
         Input(component_id="conditions-dropdown", component_property='value'))
 def update_table_by_treatment(selected_trt, selected_cond):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT TRIAL_INTERVENTIONS.intervention_name, \
@@ -421,7 +422,7 @@ def update_table_by_treatment(selected_trt, selected_cond):
         Input(component_id="manufacturer-dropdown", component_property='search_value')
         )
 def update_options(search_value):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     manu_query = "SELECT DISTINCT lead_sponsor FROM TRIALS \
@@ -442,7 +443,7 @@ def update_options(search_value):
         Input(component_id="manufacturer-dropdown", component_property='value')
         )
 def update_linegraph(selected_manu):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT distinct TRIALS.lead_sponsor as Manufacturer, \
@@ -479,7 +480,7 @@ def update_linegraph(selected_manu):
 @app.callback(Output('table-by-manufacturer', 'children'), 
         Input(component_id="manufacturer-dropdown", component_property='value'))
 def update_table_by_manufacturer(selected_manu):
-    connection = sqlite3.connect("data/trials.db")
+    connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
 
     query = "SELECT TRIALS.lead_sponsor as Manufacturer, \

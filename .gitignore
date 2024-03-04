@@ -1,10 +1,11 @@
 __pycache__
+clinicaltrials/.idea
 data/*.json
 data/csvs/*
-api/*json*
-api/data/.fda.json.icloud
 testing.ipynb
 .ipynb_checkpoints/
 .VSCodeCounter
 data/trials.db
 data/trials.db-journal
+*.csv
+.idea

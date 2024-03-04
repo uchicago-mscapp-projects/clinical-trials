@@ -1,10 +1,9 @@
-# TODO: Handle relative filepath
 import json
+import pathlib
 import pandas as pd
-from .recode import RECODED
-from .collapse_race_data import collapse_race_data, \
+from collapse_race_data import collapse_race_data, \
     WHITE, BLACK, ASIAN, AI_AN, HI_PI, LATINO, NOT_LATINO, MUL, UNK
-from .collapse_drug_data import recode_trial_drugs
+from collapse_drug_data import recode_trial_drugs
 
 def extract_fields(row):
         """
@@ -42,9 +41,6 @@ def extract_fields(row):
         'conditions': conditions_module.get('conditions', None),
 
         'keywords': conditions_module.get('keywords', None)
-        
-        # 'measures': row.get('resultsSection', {})\
-        #     .get('baselineCharacteristicsModule', {}).get('measures', {})
 }
         
         return fields
@@ -187,10 +183,14 @@ def generate_iv_loc_cond_csvs(filepath):
             # each fields object returns >=1 output row
             ext_data.extend(extraction_func(fields))
         df = pd.DataFrame(ext_data)
-        df.to_csv(f'data/csvs/{dict_name}.csv', index=None)
+
+        filename = pathlib.Path(__file__).parent / f"../../data/csvs/{dict_name}.csv"
+        df.to_csv(filename, index=None)
     
     ## Create recoded file from trial interventions data
-    recode_trial_drugs('data/csvs/fda_full.csv', 'data/csvs/trial_interventions_raw.csv')
+    fda_filename = pathlib.Path(__file__).parent / f"../../data/csvs/fda_full.csv"
+    interventions_filename =  pathlib.Path(__file__).parent / f"../../data/csvs/trial_interventions_raw.csv"
+    recode_trial_drugs(fda_filename, interventions_filename)
 
 def generate_sex_csv(filepath):
     """
@@ -206,8 +206,9 @@ def generate_sex_csv(filepath):
         for key in sex_counts.keys():
             sex_counts_final[key].append(sex_counts[key])
     
+    filename = pathlib.Path(__file__).parent / f"../../data/csvs/trial_sex.csv"
     df_of_dictionary = pd.DataFrame(sex_counts_final)
-    df_of_dictionary.to_csv(f'data/csvs/trial_sex.csv', index=None)
+    df_of_dictionary.to_csv(filename, index=None)
     
 def generate_race_csv(filepath):
     """
@@ -227,8 +228,9 @@ def generate_race_csv(filepath):
         for key in race_counts.keys():
             race_counts_final[key].append(race_counts[key])
     
+    filename = pathlib.Path(__file__).parent / f"../../data/csvs/trial_race.csv"
     df_of_dictionary = pd.DataFrame(race_counts_final)
-    df_of_dictionary.to_csv(f'data/csvs/trial_race.csv', index=None)
+    df_of_dictionary.to_csv(filename, index=None)
 
 def generate_trial_csvs(filepath):
     """
@@ -251,12 +253,14 @@ def generate_trial_csvs(filepath):
                 dictionary[key].append(fields[key])
 
     for dict_name, dictionary in trial_dicts.items():
+        filename = pathlib.Path(__file__).parent / f"../../data/csvs/{dict_name}.csv"
         df_of_dictionary = pd.DataFrame(dictionary)
-        df_of_dictionary.to_csv(f'data/csvs/{dict_name}.csv', index=None)
+        df_of_dictionary.to_csv(filename, index=None)
 
 if __name__ == "__main__":
     # generate all five CSVs
-    generate_trial_csvs('data/trials.json')
-    generate_iv_loc_cond_csvs('data/trials.json')
-    generate_race_csv('data/trials.json')
-    generate_sex_csv('data/trials.json')
+    pth = pathlib.Path(__file__).parent / f"../../data/trials.json"
+    generate_trial_csvs(pth)
+    generate_iv_loc_cond_csvs(pth)
+    generate_race_csv(pth)
+    generate_sex_csv(pth)
