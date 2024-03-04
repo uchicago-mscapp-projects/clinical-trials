@@ -2,6 +2,13 @@
 
 `clinical-trials` is a locally-hosted browser app that allows users to see the racial representativeness of clinical trials by drug and condition, as well as manufacturer over time. It takes canonical FDA approved drugs and links them to the NIH's clinical trials data using a combination of fuzzy string matching and SQL joins, and provides a drop-down interface for searching by drug name and manufacturer.
 
+## The APIs
+
+This project makes use of the FDA's openFDA API, and the NIH's Clinical Trials API. Information about both of these can be found here:
+
+openFDA: [https://clinicaltrials.gov/data-api/api](https://open.fda.gov/apis/)
+Clinical Trials: [https://clinicaltrials.gov/data-api/api](https://clinicaltrials.gov/data-api/api)
+
 ## Setting Up
 Due to dependency issues, `clinical-trials` requires a version of Python less than 3.12 to be installed, preferably 3.11.
 
@@ -16,6 +23,10 @@ Due to dependency issues, `clinical-trials` requires a version of Python less th
 ### Pulling API data
 Neither the FDA api nor the NIH Clinical Trials API require an API key. Pulling should be possible out of the box. JSON data is saved to the `/data` parent directory mentioned in the setting up section.
 
+First, fetch the FDA api data. This data is the core dataset that we will use to validate drug names in the trials data.
+Run: `python3 clinicaltrials/api/fetch_fda_data.py`
+
+Next, fetch the NIH clinical trials api data:
 Run: `python3 clinicaltrials/api/fetch_trials_data.py`
 
 After running this, you should see that the /data folder in the parent directory now includes two files: `fda.json` and `trials.json`
