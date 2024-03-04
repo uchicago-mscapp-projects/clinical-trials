@@ -1,5 +1,6 @@
 """
 Code for cleaning data from the FDA API and outputting to a CSV file.
+Written by Alison Spencer.
 """
 import json
 import pandas as pd

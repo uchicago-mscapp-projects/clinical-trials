@@ -1,12 +1,9 @@
+## Written by Caitlin Pratt
+
 import requests
 import json
 import time
-import os.path
 import pathlib
-
-# TODO: Examine data
-# TODO: Implement API call class function?
-
 
 API_URL = 'https://www.clinicaltrials.gov/api/v2/studies'
 
@@ -123,78 +120,5 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
 
     write_data(results, 'trials', append=False)
 
-
-def make_fda_api_call(skip, limit=1000, start_date="2003-01-01", end_date="2024-02-19"):
-    """
-    Makes an API call to FDA's Drugs@FDA API.
-
-    Args:
-        - skip: (int) value initially sent to 0. used to paginate.
-        - limit: (int) the maximum number of results that can be returned from
-        each API query. The API sets this to 1000.
-        -start_date: (str) the start date of submission_status_date used in 
-        results. For the project, this is set to the start of 2003 to align with
-        the clinical trials data (this is approximately when clinical trials
-        data is first available from)
-        -end_date: (str) the end date of submission_status_date used in 
-        results. For the project, this is set to 2/19/2024 to align with our 
-        final data collection.
-
-    Returns:
-        - response.json(): the json file for that specific page and query.
-    """
-
-    base_url = "https://api.fda.gov/drug/drugsfda.json?search=submissions.submission_status_date"
-    # FDA API has trouble parsing parameters, which is why the url is being input
-    # into requests as a string.
-    second_part_url = "%5B" + start_date + "%20TO%20" + end_date + "%5D"
-    third_part_url = "&skip=" + str(skip) + "&limit=" + str(limit)
-    url = base_url + second_part_url + third_part_url
-    response = requests.get(url)
-    if response.status_code != 200:
-        return None
-    return response.json()
-
-
-def pull_fda_api_data(
-    skip=0, limit=1000, start_date="2003-01-01", end_date="2024-02-19"
-):
-    """
-    Pull data for the given time frame from the Drugs@FDA API.
-
-    Args:
-        - skip: (int) value initially sent to 0. used to paginate.
-        - limit: (int) the maximum number of results that can be returned from
-        each API query. The API sets this to 1000.
-        -start_date: (str) the start date of submission_status_date used in 
-        results. For the project, this is set to the start of 2003 to align with
-        the clinical trials data (this is approximately when clinical trials 
-        data is first available from)
-        -end_date: (str) the end date of submission_status_date used in 
-        results. For the project, this is set to 2/19/2024 to align with our 
-        final data collection.
-
-    Returns:
-        - Writes data from the API out to a json file.
-    """
-    results = []
-    while True:
-        next_results = skip + 1000
-
-        print(f"Pulling FDA trial results {skip} to {next_results}")
-        
-        time.sleep(2)
-        
-        apicall = make_fda_api_call(
-            skip, limit=1000, start_date=start_date, end_date=end_date
-        )
-        if apicall is None:
-            break
-        results.append(apicall)
-        skip += limit
-        write_data(results, "fda", append=False)
-
-
 if __name__ == "__main__":
-    pull_fda_api_data()
     pull_trials_data()
