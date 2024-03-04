@@ -16,11 +16,17 @@ Due to dependency issues, `clinical-trials` requires a version of Python less th
 The structure should look something like this:
 
 ├── README.md
+
 ├── clinicaltrials
+
 │   └── (app contents)
+
 ├── data
+
 │   └── csvs
+
 ├── poetry.lock
+
 └── pyproject.toml
  
 ### Pulling API data
