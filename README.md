@@ -7,6 +7,7 @@
 This project makes use of the FDA's openFDA API, and the NIH's Clinical Trials API. Information about both of these can be found here:
 
 openFDA: [https://clinicaltrials.gov/data-api/api](https://open.fda.gov/apis/)
+
 Clinical Trials: [https://clinicaltrials.gov/data-api/api](https://clinicaltrials.gov/data-api/api)
 
 ## Setting Up
