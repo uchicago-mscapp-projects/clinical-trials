@@ -24,9 +24,11 @@ Due to dependency issues, `clinical-trials` requires a version of Python less th
 Neither the FDA api nor the NIH Clinical Trials API require an API key. Pulling should be possible out of the box. JSON data is saved to the `/data` parent directory mentioned in the setting up section.
 
 First, fetch the FDA api data. This data is the core dataset that we will use to validate drug names in the trials data.
+
 Run: `python3 clinicaltrials/api/fetch_fda_data.py`
 
 Next, fetch the NIH clinical trials api data:
+
 Run: `python3 clinicaltrials/api/fetch_trials_data.py`
 
 After running this, you should see that the /data folder in the parent directory now includes two files: `fda.json` and `trials.json`
