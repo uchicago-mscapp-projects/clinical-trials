@@ -14,6 +14,7 @@ Due to dependency issues, `clinical-trials` requires a version of Python less th
 3. Ensure that in the same parent directory as the `clinicaltrials` module, there is a folder named `data`, and a folder within data named `csvs`.
 
 The structure should look something like this:
+
 ├── README.md
 ├── clinicaltrials
 │   └── (app contents)
@@ -35,7 +36,8 @@ Once API data is pulled, it should not be necessary to pull again. Whenever API 
 `python3 clinicaltrials/data/extract_fda_data.py` and `python3 clinicaltrials/data/extract_trials_data.py`
 
 Note the following files in the same directory as the extraction scripts:
-[text](clinicaltrials/dedupe_dataframe_learned_settings) [text](clinicaltrials/dedupe_dataframe_training.json)
+`clinicaltrials/dedupe_dataframe_learned_settings`
+`clinicaltrials/dedupe_dataframe_training.json`
 
 These are trained classifier files used to perform fuzzy deduplication of FDA drug records. Do not delete them. If you do, you will have to retrain the classifier.
 
