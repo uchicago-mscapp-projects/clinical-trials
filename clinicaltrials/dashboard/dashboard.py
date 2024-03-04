@@ -90,22 +90,47 @@ app = dash.Dash(
     __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}],
 )
 
+# table columns
+tblcols= [{'name': 'Statistic', 'id': 'Stat'}, {'name': 'Value', 'id': 'Val'}]
+
+# table rows
+df_table = pd.DataFrame([{'Stat': 0, 'Val': 0}], columns=[col['name'] for col in tblcols])
+
+
 if __name__ == '__main__':
     app.run_server(debug=True)
 
 # Header
-header_and_intro = html.Div([html.H1(children='Racial and Ethnicity Representation in Clinical Trials',
+header_and_intro = html.Div([html.H1(children='Racial and Ethnic Representation in Clinical Trials',
                                 style={'textAlign': 'center','color': colors['text']}),
-                        html.Div(children='''Placeholder ''',
-                                style={'textAlign': 'left','color': colors['text'],'width' : '100%','padding' :5})])
+                        html.Div(children='''Pharmaceutical companies use clinical trials to test the effectiveness of their products. 
+                                 Clinical trials are required by the Food and Drug Administration (FDA) before new treatments are approved for use, 
+                                 and their results are routinely used to determine which treatments patients should take to treat their medical conditions. ''',
+                                style={'textAlign': 'left','color': colors['text'],'width' : '100%','padding' :5}),
+                         html.Div(children='''The clinical trials implemented by pharmaceutical companies are crucial to ensure the effectiveness of their products and 
+                                 determine the appropriate drugs for patients. However, many clinical trials do not enroll subjects who accurately 
+                                 reflect the general population. In particular, there has been frequent underrepresentation of racial and ethnic minority 
+                                 groups in clinical trials. The public has pushed for pharmaceutical companies to address these disparities through changes 
+                                 in how they select participants to test their products. Affirming this importance, over 500 pharmaceutical organizations 
+                                 have recently committed to increasing diversity in clinical trials.''',
+                                style={'textAlign': 'left','color': colors['text'],'width' : '100%','padding' :5}),
+                        html.Div(children='''Analysis of racial representation in the clinical trials data can shed light on the extent to 
+                                 which companies have been successful in accounting for different identities and characteristics in their dataset over time.
+                                 In this dashboard, we analyze representation in clinical trials for different treatments and identify trends over time. ''',
+                                style={'textAlign': 'left','color': colors['text'],'width' : '100%','padding' :5})                               
+                                ])
 
 # Search by treatment section
 search_treatment = html.Div([html.H2(children='Search by treatment',
                                       style={'textAlign': 'center','color': colors['text']}),
-                            html.Div(children='Placeholder',
+                            html.Div(children='''Users can select a treatment of interest by generic drug name, and information on that 
+                                     drug will be populated, including a list of conditions the treatment has been tested for use in during
+                                     clinical trials. After selecting one of those treatments, a visualization and summary table of racial
+                                    and ethnic representation in trials for that treatment in that condition will be displayed.''',
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                             html.Br(),
-                            html.Div(children='Choose the treatment of interest'),
+                            html.Div(children='Choose the treatment of interest', 
+                                     style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                         dcc.Dropdown(id='treatment-dropdown',
                             placeholder="Select a treatment", style={'width': '100%'}),
                         html.H3(id = 'generic_name',style={'textAlign': 'left','color': colors['text']}),
@@ -121,29 +146,31 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                             id="stacked-bar", srcDoc=None,
                             style={"border-width":"0","width":"100%","height":"600px"}
                             )]),
-                        #dcc.Graph(id='stacked-bar', style={'width': '100%'})],
                         # Table of stats from visualization.py
-                        html.Td(id="table-by-treatment",style={'width': '600px','height': '60px','textAlign': 'left'})
+                        dash_table.DataTable(id = "table-by-treatment", data = df_table.to_dict('records'))
+                        # html.Td(id="table-by-treatment",style={'width': '600px','height': '60px','textAlign': 'left'})
                             ],
                             className = 'five columns')
 
 # By manufacturer section
-search_manufacturer = html.Div([html.H2(children='Search by manufacturer',
+search_manufacturer = html.Div([html.H2(children='Search by study sponsor',
                                  style={'textAlign': 'center','color': colors['text']}),
-                            html.Div(children='Placeholder',
+                            html.Div(children='''Users can select a study sponsor of interest by generic drug name. After selecting a
+                                     study sponsor, a visualization and summary table of racial
+                                    and ethnic representation in trials sponsored by that company will be displayed.''',
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                             html.Br(),
-                            html.Div(children='Choose the manufacturer of interest'),
+                            html.Div(children='''Choose the sponsor of interest''', 
+                                     style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                         dcc.Dropdown(id='manufacturer-dropdown', #options=manu_list,
-                            placeholder="Select a manufacturer", style={'width': '100%'}),
+                            placeholder="Select a study sponsor", style={'width': '100%'}),
                         html.Br(),
                         html.Div(children=[html.Iframe(
                             id="line-graph", srcDoc=None,
                             style={"border-width":"5","width":"100%","height":"600px", 'color': colors['text']}
                             )]),
-                        html.Td(id="table-by-manufacturer",style={'width': '600px','height': '60px','textAlign': 'left'})
+                        dash_table.DataTable(id = "table-by-manufacturer", data = df_table.to_dict('records'))
                             ],
-                        #html.Div(id='table-by-manufacturer')],
                         className = 'five columns')
 
 # Define app layout
@@ -379,7 +406,7 @@ def update_stackedbar(selected_trt, selected_cond):
 
 # Callback for updating the table underneath the stacked bar chart
     # https://community.plotly.com/t/display-tables-in-dash/4707/13
-@app.callback(Output('table-by-treatment', 'children'), 
+@app.callback(Output('table-by-treatment', 'data'),
         Input(component_id="treatment-dropdown", component_property='value'),
         Input(component_id="conditions-dropdown", component_property='value'))
 def update_table_by_treatment(selected_trt, selected_cond):
@@ -407,13 +434,16 @@ def update_table_by_treatment(selected_trt, selected_cond):
                       con = connection,
                       params = (selected_trt, selected_cond))
 
+    if not selected_cond:
+        raise PreventUpdate
+
     table_by_drug = summary_statistics_table(trt_trials, \
                                     selected_trt, selected_cond)
 
     title_first_part = 'Racial Diversity in Clinical Trials Conducted for '
     title_second_part = ' in '
 
-    return table_by_drug.to_json(orient="records")
+    return table_by_drug.to_dict('records')
 
 
 # Callback function for searching manufacturers
@@ -477,7 +507,7 @@ def update_linegraph(selected_manu):
 
 # Callback for updating the table underneath the line graph by manufacturer
     # https://community.plotly.com/t/display-tables-in-dash/4707/13
-@app.callback(Output('table-by-manufacturer', 'children'), 
+@app.callback(Output('table-by-manufacturer', 'data'), 
         Input(component_id="manufacturer-dropdown", component_property='value'))
 def update_table_by_manufacturer(selected_manu):
     connection = sqlite3.connect(pth)
@@ -499,19 +529,19 @@ def update_table_by_manufacturer(selected_manu):
 	on TRIAL_RACE.nct_id = TRIALS.nct_id \
 	WHERE TRIALS.lead_sponsor LIKE ? \
 	GROUP BY TRIALS.lead_sponsor"
-    # query = "SELECT * FROM trials WHERE manufacturer = ?"
 
     manu_trials = pd.read_sql_query(sql = query, 
                       con = connection,
                       params = (selected_manu,))
     
+    if not selected_manu:
+        raise PreventUpdate
+
     table_by_manu = summary_statistics_manuf_table(manu_trials, selected_manu)
 
     title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By Manufacturers for '
 
-    return table_by_manu.to_json(orient="records")
-    return generate_table(table_by_manu, 
-            title = title_first_part_manuf + '{}'.format(selected_manu))
+    return table_by_manu.to_dict('records')
 
 
 def by_drug(data_drug, treatment_of_interest, condition_of_interest):
@@ -546,6 +576,8 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
         title_condition_of_interest = ''
     title = title_first_part + title_treatment_of_interest + ' in ' + title_condition_of_interest
 
+    plt.tick_params(labelbottom = False, bottom = False)
+
     plt.title(title)
     plt.legend()
 
@@ -565,23 +597,23 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
     iqr_by_drug = {}
     na_drug = {}
 
-    total_participants_by_drug = data_drug.sum(axis = 1)
-    max_participants_by_drug = data_drug.max(axis = 1)
-    min_participants_by_drug = data_drug.min(axis = 1)
-    ave_participants_by_drug = data_drug.mean(axis = 1)
-    median_participants_by_drug = data_drug.median(axis = 1)
+    total_participants_by_drug = data_drug.sum(axis = 1)[0]
+    max_participants_by_drug = data_drug.max(axis = 1)[0]
+    min_participants_by_drug = data_drug.min(axis = 1)[0]
+    ave_participants_by_drug = data_drug.mean(axis = 1)[0]
+    median_participants_by_drug = data_drug.median(axis = 1)[0]
     range_participants_by_drug = max_participants_by_drug - min_participants_by_drug
 
-    white_perc_drug = (data_drug['White'] / 
-                    total_participants_by_drug) * 100
-    black_perc_drug = (data_drug['Black'] / 
-                    total_participants_by_drug) * 100
-    asian_perc_drug = (data_drug['Asian'] / 
-                    total_participants_by_drug) * 100
-    hispanic_perc_drug = (data_drug['Hispanic'] / 
-                    total_participants_by_drug) * 100
-    other_perc_drug = (data_drug['Other'] / 
-                    total_participants_by_drug) * 100
+    white_perc_drug = '{:.1%}'.format(((data_drug['White'] / 
+                    total_participants_by_drug))[0])
+    black_perc_drug = '{:.1%}'.format(((data_drug['Black'] / 
+                    total_participants_by_drug))[0])
+    asian_perc_drug = '{:.1%}'.format(((data_drug['Asian'] / 
+                    total_participants_by_drug))[0])
+    hispanic_perc_drug = '{:.1%}'.format(((data_drug['Hispanic'] / 
+                    total_participants_by_drug))[0])
+    other_perc_drug = '{:.1%}'.format(((data_drug['Other'] / 
+                    total_participants_by_drug))[0])
 
     perc_participants_by_drug[treatment_of_interest] = {
         'Percentage of Whites By Drug': white_perc_drug,
@@ -591,29 +623,29 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
         'Percentage of Others By Manufacturer': other_perc_drug,
     }
 
-    ave_participants_by_drug_each_race[treatment_of_interest] = {
-        'Average Number of White Participants': data_drug['White'].mean(),
-        'Average Number of Black Participants': data_drug['Black'].mean(),
-        'Average Number of Asian Participants': data_drug['Asian'].mean(),
-        'Average Number of Hispanic Participants': data_drug['Hispanic'].mean(),
-        'Average Number of Other Participants': data_drug['Other'].mean(),
-    }
+    # ave_participants_by_drug_each_race[treatment_of_interest] = {
+    #     'Average Number of White Participants': data_drug['White'].mean(),
+    #     'Average Number of Black Participants': data_drug['Black'].mean(),
+    #     'Average Number of Asian Participants': data_drug['Asian'].mean(),
+    #     'Average Number of Hispanic Participants': data_drug['Hispanic'].mean(),
+    #     'Average Number of Other Participants': data_drug['Other'].mean(),
+    # }
 
     # SOURCE: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.
     # DataFrame.quantile.html
 
-    iqr_by_drug[treatment_of_interest] = {
-        'Interquartile Range of White Participants': data_drug[
-            'White'].quantile(0.75) - data_drug['White'].quantile(0.25),
-        'Interquartile Range of Black Participants': data_drug[
-            'Black'].quantile(0.75) - data_drug['Black'].quantile(0.25),
-        'Interquartile Range of White Participants': data_drug[
-            'Asian'].quantile(0.75) - data_drug['Asian'].quantile(0.25),
-        'Interquartile Range of White Participants': data_drug[
-            'Hispanic'].quantile(0.75) - data_drug['Hispanic'].quantile(0.25),
-        'Interquartile Range of White Participants': data_drug[
-            'Other'].quantile(0.75) - data_drug['Other'].quantile(0.25)
-    }
+    # iqr_by_drug[treatment_of_interest] = {
+    #     'Interquartile Range of White Participants': data_drug[
+    #         'White'].quantile(0.75) - data_drug['White'].quantile(0.25),
+    #     'Interquartile Range of Black Participants': data_drug[
+    #         'Black'].quantile(0.75) - data_drug['Black'].quantile(0.25),
+    #     'Interquartile Range of White Participants': data_drug[
+    #         'Asian'].quantile(0.75) - data_drug['Asian'].quantile(0.25),
+    #     'Interquartile Range of White Participants': data_drug[
+    #         'Hispanic'].quantile(0.75) - data_drug['Hispanic'].quantile(0.25),
+    #     'Interquartile Range of White Participants': data_drug[
+    #         'Other'].quantile(0.75) - data_drug['Other'].quantile(0.25)
+    # }
     
     # SOURCE 1: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.any.html
     # SOURCE 2: https://stackoverflow.com/questions/52870728/pandas-check-if
@@ -626,38 +658,38 @@ def summary_statistics_table(data_drug, treatment_of_interest, condition_of_inte
 
     # Put Summary Statistics in a dataframe to be used for dashboard viz
     df_drug = pd.DataFrame({
-        'Stat': ['Total Participants By Drug', 
-                'Maximum Participants By Drug', 
-                'Minimum Participants By Drug',
-                'Average Participants By Drug',
-                'Median Participants By Drug', 
-                'Range of Participants By Drug',
-                'Percentage of Participants By Drug', 
-                'Average Participants By Drug For Each Race', 
-                'Interquartile Range of Participants By Drug',
-                'Missing Observations'],
+        'Stat': ['Total Participants in Trials for the Drug in the Condition', 
+                'Maximum Race/Ethnicity Group Size in Trials for the Drug in the Condition', 
+                'Minimum Race/Ethnicity Group Size in Trials for the Drug in the Condition',
+                'Average Race/Ethnicity Group Size in Trials for the Drug in the Condition',
+                'Median Race/Ethnicity Group Size in Trials for the Drug in the Condition', 
+                'Range of Race/Ethnicity Group Sizes in Trials for the Drug in the Condition',
+                'Percentage of White Participants in Trials for the Drug in the Condition',
+                'Percentage of Black Participants By Drug in Trials for the Drug in the Condition',
+                'Percentage of Asian Participants in Trials for the Drug in the Condition',
+                'Percentage of Hispanic Participants in Trials for the Drug in the Condition',
+                'Percentage of Participants of Other Races in Trials for the Drug in the Condition',
+                # 'Percentage of Participants By Drug', 
+                # 'Average Participants By Drug For Each Race', 
+                # 'Interquartile Range of Participants By Drug',
+                #'Missing Observations'
+                ],
         'Val': [total_participants_by_drug, max_participants_by_drug,
                 min_participants_by_drug, ave_participants_by_drug, 
                 median_participants_by_drug,
                 range_participants_by_drug, 
-                perc_participants_by_drug,
-                ave_participants_by_drug_each_race, iqr_by_drug, 
-                na_drug]
+                white_perc_drug,
+                black_perc_drug,
+                asian_perc_drug,
+                hispanic_perc_drug,
+                other_perc_drug
+                # perc_participants_by_drug,
+                # ave_participants_by_drug_each_race, iqr_by_drug, 
+               #na_drug
+               ]
     })
 
     return df_drug
-    dash_table.DataTable(
-				columns=[{"name": i, "id": i} for i in df_drug.columns],
-				data=df_drug.to_dict("records"),
-				style_cell={'width': '300px',
-				'height': '60px',
-				'textAlign': 'left'})
-
-    return df_drug.to_dict()
-    return dash_table.DataTable(
-                data=df_drug.to_dict(),
-                columns=[{"id": x, "name": x} for x in df_drug.columns],
-            )
 
 
 # Racial Diversity in Clinical Trials Conducted By Manufacturers: Line Graph
@@ -703,10 +735,10 @@ def by_manufacturer(data_manuf, manuf):
     plt.xlabel('Year')
     plt.ylabel('Number of Participants')
 
-    title_first_part_manuf = 'Racial Diversity in Clinical Trials Conducted By '
+    title_first_part_manuf = 'Race/Ethnicity Breakdown of Clinical Trials Sponsored By '
     title_manuf = title_first_part_manuf + '{}'.format(manuf)
     plt.title(title_manuf)
-    
+
     plt.legend()
     plt.grid(True)
 
@@ -726,23 +758,23 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
     iqr_by_manufacturer = {}
     na_manufacturer = {}
 
-    total_participants_by_manufacturer = data_manuf.sum(axis = 1)
-    max_participants_by_manufacturer = data_manuf.max(axis = 1)
-    min_participants_by_manufacturer = data_manuf.min(axis = 1)
-    ave_participants_by_manufacturer = data_manuf.mean(axis = 1)
-    median_participants_by_manufacturer = data_manuf.median(axis = 1)
+    total_participants_by_manufacturer = data_manuf.sum(axis = 1)[0]
+    max_participants_by_manufacturer = data_manuf.max(axis = 1)[0]
+    min_participants_by_manufacturer = data_manuf.min(axis = 1)[0]
+    ave_participants_by_manufacturer = data_manuf.mean(axis = 1)[0]
+    median_participants_by_manufacturer = data_manuf.median(axis = 1)[0]
     range_participants_by_manufacturer = max_participants_by_manufacturer - min_participants_by_manufacturer
 
-    white_perc_manuf = (data_manuf['White'] / 
-                    total_participants_by_manufacturer) * 100
-    black_perc_manuf = (data_manuf['Black'] / 
-                    total_participants_by_manufacturer) * 100
-    asian_perc_manuf = (data_manuf['Asian'] / 
-                    total_participants_by_manufacturer) * 100
-    hispanic_perc_manuf = (data_manuf['Hispanic'] / 
-                    total_participants_by_manufacturer) * 100
-    other_perc_manuf = (data_manuf['Other'] / 
-                    total_participants_by_manufacturer) * 100
+    white_perc_manuf = '{:.1%}'.format(((data_manuf['White'] / 
+                    total_participants_by_manufacturer) )[0])
+    black_perc_manuf = '{:.1%}'.format(((data_manuf['Black'] / 
+                    total_participants_by_manufacturer))[0])
+    asian_perc_manuf = '{:.1%}'.format(((data_manuf['Asian'] / 
+                    total_participants_by_manufacturer))[0])
+    hispanic_perc_manuf = '{:.1%}'.format(((data_manuf['Hispanic'] / 
+                    total_participants_by_manufacturer))[0])
+    other_perc_manuf = '{:.1%}'.format(((data_manuf['Other'] / 
+                    total_participants_by_manufacturer) )[0])
     
     perc_participants_by_manufacturer[manufacturer] = {
         'Percentage of Whites By Manufacturer': white_perc_manuf,
@@ -787,34 +819,38 @@ def summary_statistics_manuf_table(data_manuf, manufacturer):
 
     # Put Summary Statistics in a dataframe to be used for dashboard viz
     df_manuf = pd.DataFrame({
-        'Stat': ['Total Participants By Manufacturer', 
-                'Maximum Participants By Manufacturer', 
-                'Minimum Participants By Manufacturer',
-                'Average Participants By Manufacturer',
-                'Median Participants By Manufacturer', 
-                'Range of Participants By Manufacturer',
-                'Percentage of Participants By Manufacturer', 
-                'Average Participants Each Year', 
-                'Interquartile Range of Participants By Manufacturer',
-                'Missing Observations'],
+        'Stat': ['Total Participants in Trials Conducted by the Sponsor', 
+                'Maximum Race/Ethnicity Group Size in Trials Conducted by the Sponsor', 
+                'Minimum Race/Ethnicity Group Size in Trials Conducted by the Sponsor',
+                'Average Race/Ethnicity Group Size in Trials Conducted by the Sponsor',
+                'Median Race/Ethnicity Group Size in Trials Conducted by the Sponsor', 
+                'Range of Race/Ethnicity Group Sizes in Trials Conducted by the Sponsor',
+                'Percentage of White Participants in Trials Conducted by the Sponsor',
+                'Percentage of Black Participants By Drug in Trials Conducted by the Sponsor',
+                'Percentage of Asian Participants in Trials Conducted by the Sponsor',
+                'Percentage of Hispanic Participants in Trials Conducted by the Sponsor',
+                'Percentage of Participants of Other Races in Trials Conducted by the Sponsor',
+                # 'Percentage of Participants By Manufacturer', 
+                # 'Average Participants Each Year', 
+                # 'Interquartile Range of Participants By Manufacturer',
+                #'Missing Observations'
+                ],
         'Val': [total_participants_by_manufacturer, 
                 max_participants_by_manufacturer,
                 min_participants_by_manufacturer, 
                 ave_participants_by_manufacturer,
                 median_participants_by_manufacturer, 
                 range_participants_by_manufacturer, 
-                perc_participants_by_manufacturer,
-                ave_participants_by_manufacturer_each_race, 
-                iqr_by_manufacturer, 
-                na_manufacturer]
+                white_perc_manuf,
+                black_perc_manuf,
+                asian_perc_manuf,
+                hispanic_perc_manuf,
+                other_perc_manuf
+                # perc_participants_by_manufacturer,
+                # ave_participants_by_manufacturer_each_race, 
+                # iqr_by_manufacturer, 
+                # na_manufacturer
+                ]
     })
 
     return df_manuf
-    return html.Div(
-        [
-            dash_table.DataTable(
-                data=df_manuf.to_dict(),
-                columns=[{"id": x, "name": x} for x in df_manuf.columns],
-            )
-        ]
-    )
