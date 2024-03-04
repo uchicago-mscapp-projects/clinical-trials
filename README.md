@@ -12,22 +12,6 @@ Due to dependency issues, `clinical-trials` requires a version of Python less th
 `poetry install`
 
 3. Ensure that in the same parent directory as the `clinicaltrials` module, there is a folder named `data`, and a folder within data named `csvs`.
-
-The structure should look something like this:
-
-├── README.md
-
-├── clinicaltrials
-
-│   └── (app contents)
-
-├── data
-
-│   └── csvs
-
-├── poetry.lock
-
-└── pyproject.toml
  
 ### Pulling API data
 Neither the FDA api nor the NIH Clinical Trials API require an API key. Pulling should be possible out of the box. JSON data is saved to the `/data` parent directory mentioned in the setting up section.
