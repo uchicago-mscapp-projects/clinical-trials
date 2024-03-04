@@ -3,11 +3,9 @@ Code for cleaning data from the FDA API and outputting to a CSV file.
 """
 import json
 import pandas as pd
+import pathlib
 
-
-
-
-def load_data(filepath):
+def load_fda_data(filepath):
     """
     Cleans JSON data from FDA API into a list of dictionaries.
     
@@ -76,7 +74,7 @@ def load_data(filepath):
     return results_list_of_dct
 
 
-def get_to_csv(filepath, filename):
+def generate_fda_csv(filepath, filename):
     """
     Takes JSON data from API, cleans it, and converts to a csv file.
     
@@ -89,6 +87,12 @@ def get_to_csv(filepath, filename):
         CSV of cleaned FDA API data.
     """
 
-    data = load_data(filepath)
+    data = load_fda_data(filepath)
     df = pd.DataFrame.from_dict(data)
     df.to_csv(filename, sep=",", index=False, encoding="utf-8")
+
+if __name__ == "__main__":
+    pth = pathlib.Path(__file__).parent / f"../../data/fda.json"
+    out_filename = pathlib.Path(__file__).parent / f"../../data/csvs/fda_full.csv"
+    generate_fda_csv(pth, out_filename)
+
