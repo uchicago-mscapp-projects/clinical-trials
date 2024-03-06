@@ -1,8 +1,8 @@
 '''
 Dashboard app
 Authors:
-    Table function: Kristy Kwon
-    Rest of dashboard: David Steffen
+    Visualizations: Kristy Kwon
+    Dashboard: David Steffen
 '''
 
 ##################################
@@ -35,37 +35,6 @@ connection = sqlite3.connect(pth)
 connection.row_factory = sqlite3.Row
 
 cursor = connection.cursor()
-
-# Table function from https://dash.plotly.com/layout
-
-# Including certain headers in the input for generate_table()
-# SOURCE 0: https://community.plotly.com/t/formatting-table-headers/29942
-
-# html.Div([]): Create HTML table using Table feature from Dash
-# SOURCE 1: https://community.plotly.com/t/dataframe-to-html-table-using-dash/5009
-
-# html.H1(object): Type of style in HTML
-# SOURCE 2: https://www.w3schools.com/tags/tag_hn.asp
-
-# Putting an object inside <div> tag
-# SOURCE 3: https://www.digitalocean.com/community/tutorials/how-to-style-the-
-# html-div-element-with-css
-
-def generate_table(dataframe, title = "None", max_rows=10):
-    summary_stat_table = html.Table([
-        html.Thead(
-            html.Tr([html.Th(col) for col in dataframe.columns])
-        ),
-        html.Tbody([
-            html.Tr([
-                html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-            ]) for i in range(min(len(dataframe), max_rows))
-        ])
-    ])
-    return html.Div([
-        html.H1(title),
-        summary_stat_table
-    ])
 
 
 ##################################
@@ -578,20 +547,25 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
 
     f = plt.figure(figsize = (8,6))
     plt.bar(data_drug['intervention_name'], data_drug['White'], color = 'red', label= 'White')
-    plt.bar(data_drug['intervention_name'], data_drug['Black'], color = 'orange', label= 'Black')
-    plt.bar(data_drug['intervention_name'], data_drug['Asian'], color = 'yellow', label= 'Asian')
-    plt.bar(data_drug['intervention_name'], data_drug['Hispanic'], color = 'green', label= 'Hispanic')
-    plt.bar(data_drug['intervention_name'], data_drug['Other'], color = 'blue', label= 'Other')
+    plt.bar(data_drug['intervention_name'], data_drug['Black'], color = 'orange', label= 'Black', 
+            bottom=data_drug['White'])
+    plt.bar(data_drug['intervention_name'], data_drug['Asian'], color = 'yellow', label= 'Asian', 
+            bottom=data_drug['Black'] + data_drug['White'])
+    plt.bar(data_drug['intervention_name'], data_drug['Hispanic'], color = 'green', label= 'Hispanic', 
+            bottom=data_drug['Asian'] + data_drug['Black'] + data_drug['White'])
+    plt.bar(data_drug['intervention_name'], data_drug['Other'], color = 'blue', label= 'Other', 
+            bottom=data_drug['Hispanic'] + data_drug['Asian'] + \
+                data_drug['Black'] + data_drug['White'])
 
-    plt.xlabel('Treatment Intervention')
-    plt.ylabel('Number of Participants')
+    plt.xlabel('Treatment Intervention', color = '#accdf2')
+    plt.ylabel('Number of Participants', color = '#accdf2')
 
     title_first_part = 'Race/Ethnicity Breakdown of Clinical Trials for '
 
     # SOURCE: https://peps.python.org/pep-0498/
     # String Interpolation Using F-Strings
     if treatment_of_interest:
-        title_treatment_of_interest = f' {treatment_of_interest}'
+        title_treatment_of_interest = f' {treatment_of_interest.capitalize()}'
     else:
         title_treatment_of_interest = ''
     if condition_of_interest:
@@ -600,9 +574,10 @@ def by_drug(data_drug, treatment_of_interest, condition_of_interest):
         title_condition_of_interest = ''
     title = title_first_part + title_treatment_of_interest + ' in ' + title_condition_of_interest
 
-    plt.tick_params(labelbottom = False, bottom = False)
+    plt.tick_params(labelbottom = False, bottom = False, \
+                    labeltop = False, top = False, colors = '#accdf2')
 
-    plt.title(title)
+    plt.title(title, color = '#accdf2')
     plt.legend()
 
     html_matplotlib = mpld3.fig_to_html(f)
@@ -756,12 +731,12 @@ def by_manufacturer(data_manuf, manuf):
              label = 'Hispanic')
     plt.plot(data_manuf['Year'], other_perc, marker = 'o', label = 'Other')
 
-    plt.xlabel('Year')
-    plt.ylabel('Number of Participants')
+    plt.xlabel('Year', color = '#accdf2')
+    plt.ylabel('Number of Participants', color = '#accdf2')
 
     title_first_part_manuf = 'Race/Ethnicity Breakdown of Clinical Trials Sponsored By '
     title_manuf = title_first_part_manuf + '{}'.format(manuf)
-    plt.title(title_manuf)
+    plt.title(title_manuf, color = '#accdf2')
 
     plt.legend()
     plt.grid(True)
