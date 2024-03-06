@@ -121,7 +121,7 @@ header_and_intro = html.Div([html.H1(children='Racial and Ethnic Representation 
                                 ])
 
 # Search by treatment section
-search_treatment = html.Div([html.H2(children='Search by treatment',
+search_treatment = html.Div([html.H2(children='Race and ethnicity representation in trials by treatment and condition',
                                       style={'textAlign': 'center','color': colors['text']}),
                             html.Div(children='''Users can select a treatment of interest by generic drug name, and information on that 
                                      drug will be populated, including a list of conditions the treatment has been tested for use in during
@@ -129,7 +129,13 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                                     and ethnic representation in trials for that treatment in that condition will be displayed.''',
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                             html.Br(),
-                            html.Div(children='Choose the treatment of interest', 
+                            html.Div(children='''Please note that this data is limited to treatment-condition combinations with at least
+                                     two trials reporting participant race/ethnicity data, and reporting participant race/ethnicity data 
+                                     was not mandatory before 2017. Therefore, not all treatments may be 
+                                     searchable, and not all conditions a treatment is indicated for may be searchable.''',
+                                     style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
+                            html.Br(),
+                            html.Div(children='Choose a treatment of interest (generic name)', 
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                         dcc.Dropdown(id='treatment-dropdown',
                             placeholder="Select a treatment", style={'width': '100%'}),
@@ -140,7 +146,7 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                         html.H3(id = 'app_number',style={'textAlign': 'left','color': colors['text']}),
                         # Dropdown of the conditions for the treatment selected above
                         dcc.Dropdown(id='conditions-dropdown', 
-                            placeholder="Select a condition the treatment is used for", style={'width': '100%'}),
+                            placeholder="Select a condition the selected treatment is used for", style={'width': '100%'}),
                         html.Br(),
                         html.Div(children=[html.Iframe(
                             id="stacked-bar", srcDoc=None,
@@ -148,21 +154,25 @@ search_treatment = html.Div([html.H2(children='Search by treatment',
                             )]),
                         # Table of stats from visualization.py
                         dash_table.DataTable(id = "table-by-treatment", data = df_table.to_dict('records'))
-                        # html.Td(id="table-by-treatment",style={'width': '600px','height': '60px','textAlign': 'left'})
                             ],
                             className = 'five columns')
 
 # By manufacturer section
-search_manufacturer = html.Div([html.H2(children='Search by study sponsor',
+search_manufacturer = html.Div([html.H2(children='Trends in race and ethnicity representation over time by trial sponsor',
                                  style={'textAlign': 'center','color': colors['text']}),
                             html.Div(children='''Users can select a study sponsor of interest by generic drug name. After selecting a
                                      study sponsor, a visualization and summary table of racial
                                     and ethnic representation in trials sponsored by that company will be displayed.''',
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
                             html.Br(),
+                            html.Div(children='''Please note that this data is limited to study sponsors with at least five trials
+                                     reporting participant race/ethnicity data, and reporting participant race/ethnicity data 
+                                     was not mandatory before 2017. As a result, not all study sponsors may be searchable.''',
+                                     style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
+                            html.Br(),
                             html.Div(children='''Choose the sponsor of interest''', 
                                      style={'textAlign': 'left','color': colors['text'],'width':'100%','padding' :10}),
-                        dcc.Dropdown(id='manufacturer-dropdown', #options=manu_list,
+                        dcc.Dropdown(id='manufacturer-dropdown',
                             placeholder="Select a study sponsor", style={'width': '100%'}),
                         html.Br(),
                         html.Div(children=[html.Iframe(
@@ -204,9 +214,18 @@ app.layout = html.Div(children=[
 def update_options(search_value):
     connection = sqlite3.connect(pth)
     connection.row_factory = sqlite3.Row
-    
-    trts_query = "SELECT DISTINCT intervention_name from TRIAL_INTERVENTIONS \
-            GROUP BY intervention_name HAVING count(*) >= 5"
+
+    trts_query = "SELECT DISTINCT TRIAL_INTERVENTIONS.intervention_name \
+            from TRIAL_INTERVENTIONS INNER JOIN TRIAL_RACE \
+            ON TRIAL_INTERVENTIONS.nct_id = TRIAL_RACE.nct_id \
+            INNER JOIN TRIAL_CONDITIONS \
+            ON TRIAL_INTERVENTIONS.nct_id = TRIAL_CONDITIONS.nct_id \
+            WHERE TRIAL_RACE.WHITE IS NOT NULL \
+            AND TRIAL_INTERVENTIONS.intervention_name NOT LIKE '%placebo%' \
+            GROUP BY TRIAL_INTERVENTIONS.intervention_name, \
+            TRIAL_CONDITIONS.condition \
+            HAVING count(*) >= 2"
+
     trt_list = pd.read_sql_query(trts_query, connection)
     if not search_value:
         raise PreventUpdate
@@ -353,7 +372,8 @@ def update_output_conditions(selected_trt):
     INNER JOIN TRIAL_RACE \
     ON TRIAL_CONDITIONS.nct_id = TRIAL_RACE.nct_id \
     WHERE TRIAL_INTERVENTIONS.intervention_name = ? \
-    AND TRIAL_RACE.WHITE IS NOT NULL"
+    AND TRIAL_RACE.WHITE IS NOT NULL \
+    GROUP BY TRIAL_CONDITIONS.condition HAVING count(*) >=2"
 
     conditions = pd.read_sql_query(sql = query, 
                       con = connection,
@@ -456,13 +476,17 @@ def update_options(search_value):
     connection.row_factory = sqlite3.Row
 
     manu_query = "SELECT DISTINCT lead_sponsor FROM TRIALS \
-        GROUP BY lead_sponsor HAVING count(*) >= 5"
+    INNER JOIN TRIAL_RACE \
+    ON TRIALS.nct_id = TRIAL_RACE.nct_id \
+    WHERE TRIAL_RACE.WHITE IS NOT NULL \
+    GROUP BY lead_sponsor HAVING count(*) >= 5"
+
     manu_list = pd.read_sql_query(manu_query, connection)
     if not search_value:
         raise PreventUpdate
     return_vals = []
     for _, val in enumerate(manu_list.values):
-        if val[0].startswith(search_value):
+        if val[0].startswith(search_value.upper()):
             return_vals.append(val[0])
     return return_vals
 
