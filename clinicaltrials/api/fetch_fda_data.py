@@ -4,7 +4,6 @@ Written by Alison Spencer.
 """
 
 import time
-import os.path
 import requests
 import json
 import pathlib
