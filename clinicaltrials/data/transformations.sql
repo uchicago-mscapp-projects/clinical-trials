@@ -1,3 +1,5 @@
+/* Creates a joined table of interventions and trial sponsors. Written by Caitlin Pratt. */
+
 DROP TABLE IF EXISTS TRIALS_JOINED;
 
 CREATE TABLE TRIALS_JOINED AS SELECT 

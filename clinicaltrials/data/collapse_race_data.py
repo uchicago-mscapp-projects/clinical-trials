@@ -1,3 +1,10 @@
+"""
+Collapses unnormalized race categories from the clinical trials data into
+a set of standardized categories.
+
+Written by Caitlin Pratt
+"""
+
 import re
 import json
 
@@ -13,7 +20,7 @@ UNK = 'unknown'
 
 def get_distinct_race_categories(filepath):
     """
-    Finds distinct values for race used in the returned CDC trial data.
+    Finds distinct values for race used in the returned clinical trials data.
 
     Args:
     -- filepath (str): The filepath of the json file returned by the API

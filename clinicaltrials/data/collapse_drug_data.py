@@ -1,7 +1,15 @@
-import pandas as pd
+"""
+Collapses the drugs returned from the FDA api into a list of canonical drugs
+using a combination of fuzzy deduping, and matches to the list of interventions
+in the clinical trials using jaro-winkler similarity.
+
+Written by Caitlin Pratt
+"""
+
 import jellyfish
 import pandas_dedupe
 import pathlib
+import pandas as pd
 
 def create_canonical_drugs(fda_filename):
     """
@@ -13,7 +21,7 @@ def create_canonical_drugs(fda_filename):
 
     Returns:
     None. Saves a csv of FDA drug records deduped on brand name.
-    
+
     """
     fda = pd.read_csv(fda_filename)
 
@@ -21,9 +29,11 @@ def create_canonical_drugs(fda_filename):
     fda_deduped = pandas_dedupe.dedupe_dataframe(fda, ['brand_name'])
     fda_canonical = fda_deduped.drop_duplicates(subset=['brand_name'])
 
-    filename = pathlib.Path(__file__).parent / f"../../data/csvs/canonical_drugs.csv"
-    fda_canonical.to_csv(filename, columns=['brand_name'], 
+    filename = pathlib.Path(__file__).parent / \
+        f"../../data/csvs/canonical_drugs.csv"
+    fda_canonical.to_csv(filename, columns=['brand_name'],
                          index=False)
+
 
 def get_probable_matches(canonical_data, raw_trials_filename, tolerance=.85):
     """
@@ -39,16 +49,16 @@ def get_probable_matches(canonical_data, raw_trials_filename, tolerance=.85):
     raw = pd.read_csv(raw_trials_filename)
 
     raw_unique = raw['intervention_name'].str.lower().unique()
-    
+
     recoded = {}
     for raw_entry in raw_unique:
         for canon_entry in canonical_data:
-                # Block on the first letter to speed up computation
-                if raw_entry.startswith(canon_entry[0]):
-                    sim_score = jellyfish.jaro_similarity(canon_entry, raw_entry)
-                    if sim_score >= tolerance:
-                        recoded[raw_entry] = canon_entry
-                        break
+            # Block on the first letter to speed up computation
+            if raw_entry.startswith(canon_entry[0]):
+                sim_score = jellyfish.jaro_similarity(canon_entry, raw_entry)
+                if sim_score >= tolerance:
+                    recoded[raw_entry] = canon_entry
+                    break
 
     return recoded
 
@@ -72,10 +82,10 @@ def recode_trial_drugs(canonical_filename, raw_filename):
     trial_interventions = pd.read_csv(raw_filename)
     trial_interventions['intervention_name'] = trial_interventions['intervention_name'].str.lower()
     trial_interventions['intervention_name'].replace(probable_matches)
-    
+
     # Recoding introduces duplicates
     trials = trial_interventions.drop_duplicates()
 
-    filename = pathlib.Path(__file__).parent / f"../../data/csvs/trial_interventions.csv"
+    filename = pathlib.Path(__file__).parent / \
+        f"../../data/csvs/trial_interventions.csv"
     trials.to_csv(filename, index=None)
-    

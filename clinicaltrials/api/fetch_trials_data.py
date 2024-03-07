@@ -1,4 +1,6 @@
-## Written by Caitlin Pratt
+"""
+Pulls records from the Clinical Trials API. Written by Caitlin Pratt.
+"""
 
 import requests
 import json
@@ -105,7 +107,7 @@ def pull_trials_data(limit_per_call=1000, limit_total=float('inf'),
             print(f"Pulling clinical trial records {count_results} to {next_results}")
 
             response = make_trials_api_call(limit_per_call=limit_per_call,
-                                            fields=fields, pageToken=next_page_token).json()
+                        fields=fields, pageToken=next_page_token).json()
 
             next_page_token = response['nextPageToken']
 
