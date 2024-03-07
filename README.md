@@ -40,6 +40,7 @@ Once API data is pulled, it should not be necessary to pull again. Whenever API 
 `python3 clinicaltrials/data/extract_fda_data.py` and `python3 clinicaltrials/data/extract_trials_data.py`
 
 Note the following files in the same directory as the extraction scripts:
+
 `clinicaltrials/dedupe_dataframe_learned_settings`
 
 `clinicaltrials/dedupe_dataframe_training.json`
