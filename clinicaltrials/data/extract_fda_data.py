@@ -22,9 +22,9 @@ def load_fda_data(filepath):
     with open(filepath) as json_file:
         data = json.load(json_file)
     results_list_of_dct = []
-    for i, _ in enumerate(data):
-        # data[i]['results'] is a list of dictionaries
-        page_i_result = data[i]["results"]
+    for page, _ in enumerate(data):
+        # data[page]['results'] is a list of dictionaries
+        page_i_result = data[page]["results"]
         for dct in page_i_result:
             submission_status_date = dct.get("submissions", {})
             if submission_status_date:
