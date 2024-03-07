@@ -47,7 +47,7 @@ Note the following files in the same directory as the extraction scripts:
 
 These are trained classifier files used to perform fuzzy deduplication of FDA drug records. Do not delete them. If you do, you will have to retrain the classifier.
 
-Once you have run the cleaning screepts, you should see that the `csvs` parent data directory is now populated with nine CSVs:
+Once you have run the cleaning scripts, you should see that the `csvs` parent data directory is now populated with nine CSVs:
 
 `fda_full.csv`
 `trial_conditions.csv`
