@@ -41,6 +41,7 @@ Once API data is pulled, it should not be necessary to pull again. Whenever API 
 
 Note the following files in the same directory as the extraction scripts:
 `clinicaltrials/dedupe_dataframe_learned_settings`
+
 `clinicaltrials/dedupe_dataframe_training.json`
 
 These are trained classifier files used to perform fuzzy deduplication of FDA drug records. Do not delete them. If you do, you will have to retrain the classifier.
